@@ -6,3 +6,5 @@ __pycache__/
 results/*.png
 results/*.npz
 .ipynb_checkpoints/
+results/*preview*
+results/*smoke*
