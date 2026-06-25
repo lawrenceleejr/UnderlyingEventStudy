@@ -97,7 +97,7 @@ if nompi_efn:
 xf_block = ""
 if xf_row:
     xf_block = f"""
-    <p>On a matched 35k-event sample the Particle Transformer reaches
+    <p>On a matched held-out subsample the Particle Transformer reaches
     corr&nbsp;<span class="num">{fmt(xf_row['corr'])}</span> vs the EFN's
     <span class="num">{fmt(xf_efn['corr'])}</span> — the attention model and the
     deep set agree, confirming the signal is in the data, not the architecture.</p>"""

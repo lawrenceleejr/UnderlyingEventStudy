@@ -65,7 +65,15 @@ information is carried by the fragmentation tied to the primary scatter's
 noise. So the predictive handle is the **beam-remnant/ISR recoil**, more than the
 MPI "underlying event" per se.
 
-## 4. Relation to the original hypothesis
+## 4. Architecture cross-check (EFN vs Particle Transformer)
+
+On a matched held-out subsample, a permutation-invariant Particle Transformer and
+the Energy Flow Network agree closely (corr ≈ 0.25 vs 0.23), both well above the
+hand-built-observable baselines (≈ 0.16). The signal is in the data, not an
+artefact of one architecture. (The Transformer is the heavier model; on a Mac M2
+GPU via `train.sh` it trains comfortably — on CPU it is the slow path.)
+
+## 5. Relation to the original hypothesis
 
 The premise — *the soft event encodes the hard-scatter longitudinal boost* — holds
 in simulation. The nuance is which soft component carries it: not the MPI/UE, but
@@ -75,7 +83,7 @@ the Sjöstrand–Skands beam-remnant model ties to the initiator `x` values. Pyt
 itself informative: a model trained on data can be compared against Pythia to test
 whether nature shows a *stronger* correlation than the generator.
 
-## 5. Caveats and next step (real data)
+## 6. Caveats and next step (real data)
 
 - These numbers are Pythia8 truth level: no detector resolution, no pileup, full
   acceptance. Real CMS data has ~20–30 pileup interactions that contaminate the
