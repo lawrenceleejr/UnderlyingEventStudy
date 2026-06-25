@@ -50,9 +50,40 @@ class Splits:
     extra: dict  # event-level scalars per split (for baselines/plots)
 
 
+def _apply_particle_filter(data, abs_eta_max=None, abs_eta_min=None, charged_only=False):
+    """Mask particles in-place on the jagged p_* columns (for ablations) and
+    recompute the event-level summary scalars so baselines stay consistent."""
+    eta = data["p_eta"]
+    keep = ak.ones_like(eta, dtype=bool)
+    if abs_eta_max is not None:
+        keep = keep & (abs(eta) < abs_eta_max)
+    if abs_eta_min is not None:
+        keep = keep & (abs(eta) >= abs_eta_min)
+    if charged_only:
+        keep = keep & (data["p_charge"] != 0)
+    pcols = [c for c in ak.fields(data) if c.startswith("p_")]
+    new = {c: data[c][keep] for c in pcols}
+    # recompute summaries from the filtered set
+    pt = np.exp(new["p_log_pt"])
+    sum_pt = ak.sum(pt, axis=1)
+    eta_ptw = ak.where(sum_pt > 0, ak.sum(pt * new["p_eta"], axis=1) / sum_pt, 0.0)
+    nf = ak.sum(new["p_eta"] > 0, axis=1); nb = ak.sum(new["p_eta"] < 0, axis=1)
+    fb = ak.where((nf + nb) > 0, (nf - nb) / (nf + nb), 0.0)
+    keep_cols = {c: data[c] for c in ak.fields(data) if not c.startswith("p_")}
+    keep_cols.update(new)
+    keep_cols["n_soft"] = ak.num(new["p_log_pt"])
+    keep_cols["sum_pt"] = sum_pt
+    keep_cols["eta_ptweighted"] = eta_ptw
+    keep_cols["fb_asym"] = fb
+    return ak.Array(keep_cols)
+
+
 def load_splits(parquet: str, max_p: int = config.MAX_PARTICLES,
-                targets=tuple(config.TARGETS), seed: int = config.SEED) -> Splits:
+                targets=tuple(config.TARGETS), seed: int = config.SEED,
+                abs_eta_max=None, abs_eta_min=None, charged_only=False) -> Splits:
     data = ak.from_parquet(parquet)
+    if abs_eta_max is not None or abs_eta_min is not None or charged_only:
+        data = _apply_particle_filter(data, abs_eta_max, abs_eta_min, charged_only)
     N = len(data)
     Y = np.stack([np.asarray(data[t]) for t in targets], axis=-1).astype(np.float32)
     X, M = _pad_dense(data, max_p)
