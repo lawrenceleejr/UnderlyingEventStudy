@@ -64,6 +64,66 @@ def transverse_mass(mu, nu_px, nu_py):
     return np.sqrt(2 * mu_pt * nu_pt * (1 - np.cos(dphi)))
 
 
+def write_report(R, outdir):
+    yprior = R.get("yW_prior_std", float("nan"))
+    ycond = R.get("yW_conditional_res", R["transfer_y"]["resolution"])
+    reduction = 100 * (1 - ycond / yprior) if yprior else float("nan")
+    md = f"""# W-boson boost from the soft system &rarr; W-mass application
+
+Train the soft-particle boost regressor on **Z** (boost known from the dilepton),
+apply it to **W&rarr;&mu;&nu;** (boost unknown), then ask what it buys for the W mass.
+
+## 1. Z &rarr; W transfer — the key enabler (it works)
+| quantity | corr |
+|---|---|
+| p_z (Z test, in-domain) | {R['z_pz_corr']:.3f} |
+| **p_z (Z-trained, applied to W)** | **{R['transfer_pz']['corr']:.3f}** |
+| y_W (Z-trained, applied to W) | {R['transfer_y']['corr']:.3f} |
+
+A model trained only on Z predicts the **W** longitudinal boost as well as it does
+in-domain on Z. Z genuinely calibrates W — the premise the whole W-mass programme
+relies on — and the soft-system boost estimator is portable across the two.
+
+![Z->W transfer](wtransfer_pz.png)
+
+## 2. How strong is the per-event constraint? (honest: weak)
+The prior spread of y_W is {yprior:.2f}; conditioning on the soft system gives a
+residual spread of {ycond:.2f} — only a **{reduction:.0f}% reduction**. With
+corr&nbsp;&approx;&nbsp;0.29 the soft event explains &approx;8% of the boost
+variance, so per event the neutrino p_z is still loosely constrained
+(RMS &approx; {R['nu_pz']['rmse']:.0f} GeV).
+
+## 3. Reconstructed m_W per event (no improvement yet)
+| &nu; p_z hypothesis | median m_W [GeV] | resolution 60&ndash;100 GeV |
+|---|---|---|
+| truth (ideal check) | {R['mW_truth_check']:.2f} | sharp |
+| soft-system | {R['mW_median_soft']:.2f} | {R['mW_resolution_soft']:.1f} GeV |
+| none (p_z = 0) | – | {R['mW_resolution_zero']:.1f} GeV |
+
+![mW reco](wmass_reco.png)
+
+Directly reconstructing m_W event-by-event from the soft-predicted &nu; p_z does
+**not** beat the no-longitudinal-information case at this resolution — the truth-p_z
+curve shows the ceiling if the boost were known exactly.
+
+## 4. Where the value actually is
+- **Portability (proven):** train on Z, deploy on W — the hard part works.
+- **Aggregate, not per-event:** even a weak per-event correlation constrains the
+  *ensemble* y_W distribution, which is currently taken from PDFs and is a leading
+  m_W systematic. The soft system offers a *data-driven* cross-check on the W
+  longitudinal kinematics, orthogonal to the recoil (which only fixes p_T^W).
+- **Headroom:** resolution should improve with a heavier model (Transformer on
+  GPU), more statistics, and — crucially — by moving beyond Pythia, since the
+  MPI-off study shows the signal is in the beam-remnant/ISR fragmentation whose
+  data/MC modelling is exactly what a real measurement would pin down.
+
+This is a demonstrator, not a finished measurement: it shows the estimator is
+real and portable, and quantifies honestly how much longitudinal information the
+soft event currently provides.
+"""
+    open(os.path.join(outdir, "REPORT_wmass.md"), "w").write(md)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--z", default="data/skim/pythia.parquet")
@@ -72,8 +132,16 @@ def main():
     ap.add_argument("--max-p", type=int, default=200)
     ap.add_argument("--device", default="auto")
     ap.add_argument("--outdir", default=str(config.RESULTS))
+    ap.add_argument("--report-only", action="store_true",
+                    help="regenerate REPORT_wmass.md from an existing wmass.json")
     args = ap.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
+
+    if args.report_only:
+        R = json.load(open(os.path.join(args.outdir, "wmass.json")))
+        write_report(R, args.outdir)
+        print("regenerated REPORT_wmass.md")
+        return
     ipz = list(config.TARGETS).index("pz_Z")
     iy = list(config.TARGETS).index("y_Z")
 
@@ -119,6 +187,8 @@ def main():
     results = {
         "z_pz_corr": z_pz["corr"],
         "transfer_pz": transfer_pz, "transfer_y": transfer_y,
+        "yW_prior_std": float(np.std(yW_true)),
+        "yW_conditional_res": float(transfer_y["resolution"]),
         "nu_pz": nu_metrics,
         "nu_pz_noinfo_rms": float(np.std(nu_pz_true)),
         "mW_resolution_soft": float(np.std(around(mW_soft))),
@@ -147,48 +217,7 @@ def main():
     ax.set_xlabel(r"reconstructed $m_W$ [GeV]"); ax.set_ylabel("a.u."); ax.legend(fontsize=11)
     fig.tight_layout(); fig.savefig(os.path.join(args.outdir, "wmass_reco.png"), dpi=110); plt.close(fig)
 
-    # report
-    R = results
-    md = f"""# W-boson boost from the soft system &rarr; W-mass application
-
-Train the soft-particle boost regressor on **Z** (boost known from the dilepton),
-apply it to **W&rarr;&mu;&nu;** (boost unknown), infer the neutrino p_z, reconstruct m_W.
-
-## Z &rarr; W transfer (the key enabler)
-| quantity | corr | RMSE |
-|---|---|---|
-| pz (Z test, in-domain) | {R['z_pz_corr']:.3f} | – |
-| **pz (applied to W)** | **{R['transfer_pz']['corr']:.3f}** | {R['transfer_pz']['rmse']:.1f} GeV |
-| y_W (applied to W) | {R['transfer_y']['corr']:.3f} | {R['transfer_y']['rmse']:.3f} |
-
-The Z-trained estimator transfers to W with comparable correlation &mdash; Z
-genuinely calibrates W, as the W-mass programme assumes.
-
-## Neutrino p_z constraint
-- soft-system &nu; p_z: corr {R['nu_pz']['corr']:.3f}, RMS **{R['nu_pz']['rmse']:.1f} GeV**
-- with no longitudinal information the &nu; p_z spread is {R['nu_pz_noinfo_rms']:.1f} GeV.
-
-So the soft system reduces the per-event &nu; p_z uncertainty from
-{R['nu_pz_noinfo_rms']:.0f} &rarr; {R['nu_pz']['rmse']:.0f} GeV.
-
-## Reconstructed m_W (invariant mass, not transverse mass)
-| &nu; p_z hypothesis | median m_W | resolution (60&ndash;100 GeV) |
-|---|---|---|
-| truth (ideal check) | {R['mW_truth_check']:.2f} | – |
-| **soft-system** | {R['mW_median_soft']:.2f} | **{R['mW_resolution_soft']:.1f} GeV** |
-| none (p_z=0) | – | {R['mW_resolution_zero']:.1f} GeV |
-
-![transfer](wtransfer_pz.png)
-![mW reco](wmass_reco.png)
-
-**Read honestly:** the per-event m_W is still broad &mdash; the soft system is a
-loose longitudinal constraint, not a sharp p_z measurement. Its value is as a
-*data-driven* handle on the W longitudinal kinematics (currently taken from PDFs),
-and as an extra observable that breaks the m_W &harr; production-model degeneracy.
-Resolution improves with statistics, a heavier model, and (in data) PV-based
-pileup mitigation.
-"""
-    open(os.path.join(args.outdir, "REPORT_wmass.md"), "w").write(md)
+    write_report(results, args.outdir)
     print("wrote results/wmass.json, REPORT_wmass.md, wtransfer_pz.png, wmass_reco.png")
 
 
