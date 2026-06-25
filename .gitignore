@@ -8,3 +8,4 @@ results/*.npz
 .ipynb_checkpoints/
 results/*preview*
 results/*smoke*
+results/norm_*.json
