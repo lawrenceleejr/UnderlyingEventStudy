@@ -1,0 +1,8 @@
+data/cache/
+data/skim/
+*.root
+__pycache__/
+*.pyc
+results/*.png
+results/*.npz
+.ipynb_checkpoints/

@@ -1,0 +1,18 @@
+# Core HEP I/O
+uproot>=5.3
+awkward>=2.6
+vector>=1.4
+aiohttp>=3.9
+requests>=2.31
+# Numerics / data
+numpy>=1.26
+pandas>=2.2
+pyarrow>=16
+scipy>=1.13
+# ML
+scikit-learn>=1.4
+torch>=2.2
+# Plotting / UX
+matplotlib>=3.8
+mplhep>=0.3
+tqdm>=4.66
