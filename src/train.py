@@ -1,6 +1,11 @@
 """Train a particle-cloud regressor (EFN or Transformer) on the soft particles."""
 from __future__ import annotations
 
+import os
+
+# let any op without an MPS kernel fall back to CPU (must be set before torch use)
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -8,6 +13,21 @@ from torch.utils.data import DataLoader, TensorDataset
 from . import config
 from .models.efn import EnergyFlowNetwork
 from .models.transformer import ParticleTransformer
+
+
+def pick_device(pref: str = "auto") -> str:
+    """Choose the fastest available backend.
+
+    "auto" -> Apple Metal (mps) on Mac, else CUDA, else CPU. This is what makes
+    the training run fast on an M-series Mac with zero extra flags.
+    """
+    if pref and pref != "auto":
+        return pref
+    if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        return "mps"
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
 
 
 def _loaders(splits, batch=256):
@@ -28,8 +48,11 @@ def build_model(name, n_feat, n_out):
 
 
 def train_model(splits, name="efn", epochs=40, lr=1e-3, batch=256,
-                patience=8, device="cpu", verbose=True):
+                patience=8, device="auto", verbose=True):
     torch.manual_seed(config.SEED)
+    device = pick_device(device)
+    if verbose:
+        print(f"  [{name}] device = {device}", flush=True)
     n_feat = splits.Xtr.shape[-1]
     n_out = splits.Ytr.shape[-1]
     model = build_model(name, n_feat, n_out).to(device)

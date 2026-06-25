@@ -9,3 +9,4 @@ results/*.npz
 results/*preview*
 results/*smoke*
 results/norm_*.json
+!data/skim/pythia_demo.parquet

@@ -25,7 +25,7 @@ except Exception:
 
 
 def evaluate(parquet, models=("efn",), epochs=40, tag="pythia", outdir=None,
-             max_p=config.MAX_PARTICLES):
+             max_p=config.MAX_PARTICLES, device="auto"):
     outdir = outdir or str(config.RESULTS)
     os.makedirs(outdir, exist_ok=True)
     splits = dataset.load_splits(parquet, max_p=max_p)
@@ -51,7 +51,7 @@ def evaluate(parquet, models=("efn",), epochs=40, tag="pythia", outdir=None,
     deep_pred = {}
     for mname in models:
         print(f"== training {mname} ==", flush=True)
-        _, pred_raw, val = train.train_model(splits, name=mname, epochs=epochs)
+        _, pred_raw, val = train.train_model(splits, name=mname, epochs=epochs, device=device)
         pert = {t: pred_raw[:, ti] for ti, t in enumerate(targets)}
         deep_pred[mname] = pert
         results["models"][mname] = _score(pert, splits, targets)
@@ -158,9 +158,10 @@ def main():
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--tag", default="pythia")
     ap.add_argument("--max-p", type=int, default=config.MAX_PARTICLES)
+    ap.add_argument("--device", default="auto", help="auto|mps|cuda|cpu")
     args = ap.parse_args()
     evaluate(args.parquet, models=tuple(args.models), epochs=args.epochs,
-             tag=args.tag, max_p=args.max_p)
+             tag=args.tag, max_p=args.max_p, device=args.device)
 
 
 if __name__ == "__main__":

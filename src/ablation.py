@@ -30,13 +30,15 @@ def main():
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--max-p", type=int, default=config.MAX_PARTICLES)
     ap.add_argument("--out", default=str(config.RESULTS / "ablation.json"))
+    ap.add_argument("--device", default="auto", help="auto|mps|cuda|cpu")
     args = ap.parse_args()
 
     rows = {}
     for name, filt in CONFIGS.items():
         print(f"\n==== ablation: {name} ({filt}) ====", flush=True)
         sp = dataset.load_splits(args.parquet, max_p=args.max_p, **filt)
-        _, pred, _ = train.train_model(sp, name="efn", epochs=args.epochs, verbose=False)
+        _, pred, _ = train.train_model(sp, name="efn", epochs=args.epochs,
+                                       device=args.device, verbose=False)
         ip = list(config.TARGETS).index(config.PRIMARY_TARGET)
         yte = sp.extra["y_test_raw"][:, ip]
         m = metrics.regression_metrics(yte, pred[:, ip])
