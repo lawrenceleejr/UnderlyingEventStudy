@@ -49,21 +49,21 @@ private:
 };
 
 PFNanoLite::PFNanoLite(const edm::ParameterSet& ps)
-    : muTok_(consumes(ps.getParameter<edm::InputTag>("muons"))),
-      pfTok_(consumes(ps.getParameter<edm::InputTag>("pfCandidates"))),
-      lostTok_(consumes(ps.getParameter<edm::InputTag>("lostTracks"))),
+    : muTok_(consumes<std::vector<pat::Muon>>(ps.getParameter<edm::InputTag>("muons"))),
+      pfTok_(consumes<std::vector<pat::PackedCandidate>>(ps.getParameter<edm::InputTag>("pfCandidates"))),
+      lostTok_(consumes<std::vector<pat::PackedCandidate>>(ps.getParameter<edm::InputTag>("lostTracks"))),
       useLost_(ps.getParameter<bool>("useLostTracks")),
       pfPtMin_(ps.getParameter<double>("pfPtMin")) {
   usesResource("TFileService");
   edm::Service<TFileService> fs;
   tree_ = fs->make<TTree>("Events", "Events");
-  tree_->Branch("nMuon", &nMuon_);
+  tree_->Branch("nMuon", &nMuon_, "nMuon/i");
   tree_->Branch("Muon_pt", &Muon_pt_);
   tree_->Branch("Muon_eta", &Muon_eta_);
   tree_->Branch("Muon_phi", &Muon_phi_);
   tree_->Branch("Muon_mass", &Muon_mass_);
   tree_->Branch("Muon_charge", &Muon_charge_);
-  tree_->Branch("nPFCands", &nPFCands_);
+  tree_->Branch("nPFCands", &nPFCands_, "nPFCands/i");
   tree_->Branch("PFCands_pt", &PFCands_pt_);
   tree_->Branch("PFCands_eta", &PFCands_eta_);
   tree_->Branch("PFCands_phi", &PFCands_phi_);
