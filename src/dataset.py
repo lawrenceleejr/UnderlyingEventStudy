@@ -122,6 +122,21 @@ def load_splits(parquet: str, max_p: int = config.MAX_PARTICLES,
     )
 
 
+def featurize(parquet: str, feat_mean: np.ndarray, feat_std: np.ndarray,
+              max_p: int = config.MAX_PARTICLES, abs_eta_max=None, charged_only=False):
+    """Pad + normalize a parquet using EXTERNAL stats (e.g. trained on Z).
+
+    Returns (X[N,P,F], mask[N,P], data) so a model trained on one sample can be
+    applied to another (the Z -> W transfer).
+    """
+    data = ak.from_parquet(parquet)
+    if abs_eta_max is not None or charged_only:
+        data = _apply_particle_filter(data, abs_eta_max=abs_eta_max, charged_only=charged_only)
+    X, M = _pad_dense(data, max_p)
+    Xn = ((X - feat_mean) / feat_std) * M[..., None]
+    return Xn.astype(np.float32), M, data
+
+
 def save_norm(splits: Splits, path: str):
     json.dump(
         {"feat_mean": splits.feat_mean.tolist(), "feat_std": splits.feat_std.tolist(),
