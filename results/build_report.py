@@ -22,6 +22,7 @@ main = load("metrics_pythia.json")
 abl = load("ablation.json")
 nompi = load("metrics_nompi.json")
 xf = load("metrics_modelcompare.json")
+wm = load("wmass.json")
 
 ORDER = ["mean", "linear", "gbdt_summary", "efn", "transformer"]
 LABEL = {"mean": "predict-the-mean", "linear": "linear · UE summary obs",
@@ -101,6 +102,43 @@ if xf_row:
     corr&nbsp;<span class="num">{fmt(xf_row['corr'])}</span> vs the EFN's
     <span class="num">{fmt(xf_efn['corr'])}</span> — the attention model and the
     deep set agree, confirming the signal is in the data, not the architecture.</p>"""
+
+wblock = ""
+if wm:
+    yred = 100 * (1 - wm.get("yW_conditional_res", 1) / wm.get("yW_prior_std", 1)) if wm.get("yW_prior_std") else 0
+    wblock = f"""
+  <h2><span class="n">04</span>The motivating application: W-boson boost</h2>
+  <p class="sectsub">The real target is W&rarr;&mu;&nu;, where the neutrino p<sub>z</sub>
+  is unmeasured — the longitudinal d.o.f. that forces W-mass analyses onto the
+  transverse mass and a PDF-modelled rapidity distribution. Train the estimator on
+  Z (boost known), apply to W (boost unknown).</p>
+  <table class="data">
+    <thead><tr><th>quantity</th><th>corr</th></tr></thead>
+    <tbody>
+      {tr(['p<sub>z</sub> &mdash; Z test (in-domain)', f'<span class="num">{fmt(wm["z_pz_corr"])}</span>'])}
+      {tr(['<b>p<sub>z</sub> &mdash; Z-trained, applied to W</b>', f'<span class="num">{fmt(wm["transfer_pz"]["corr"])}</span>'], 'hi')}
+      {tr(['y<sub>W</sub> &mdash; Z-trained, applied to W', f'<span class="num">{fmt(wm["transfer_y"]["corr"])}</span>'])}
+    </tbody>
+  </table>
+  <figure><img alt="Z to W transfer" src="{b64('wtransfer_pz.png')}">
+    <figcaption>A model trained only on Z predicts the <b>W</b> longitudinal boost
+    as well as it does in-domain on Z — the estimator is portable, the key enabler
+    for "Z calibrates W".</figcaption>
+  </figure>
+  <div class="callout"><p><b>Honest read.</b> Per event the constraint is weak: the
+  y<sub>W</sub> spread shrinks only ~{yred:.0f}% and direct m<sub>W</sub>
+  reconstruction from the soft-predicted &nu; p<sub>z</sub> does not yet beat the
+  no-information case. The value is an <b>aggregate, data-driven</b> handle on the
+  W longitudinal kinematics (today taken from PDFs) — orthogonal to the recoil,
+  which only fixes p<sub>T</sub>. Headroom: heavier models on GPU, more statistics,
+  and training on data.</p></div>
+  <figure><img alt="W mass reconstruction" src="{b64('wmass_reco.png')}">
+    <figcaption>Reconstructed m<sub>W</sub> for three neutrino-p<sub>z</sub>
+    hypotheses. Truth-p<sub>z</sub> shows the ceiling; the soft-system estimate
+    currently overlaps the no-information case — the limit is resolution, not method.</figcaption>
+  </figure>
+
+  <h2><span class="n">05</span>What this means</h2>"""
 
 img_pred = b64("pred_vs_true_pythia.png")
 img_res = b64("resolution_pythia.png")
@@ -229,8 +267,7 @@ HTML = f"""<title>Reading the Z boost from the soft event</title>
   particles from multi-parton interactions. The technical "underlying event" is
   more noise than signal for this task.</p>
   {xf_block}
-
-  <h2><span class="n">04</span>What this means</h2>
+  {wblock}
   <p>The premise holds in simulation: the soft event encodes the hard-scatter
   longitudinal boost. The nuance is <em>which</em> component carries it — the
   beam-remnant/ISR fragmentation that the Sjöstrand&ndash;Skands model ties to the

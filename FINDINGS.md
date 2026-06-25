@@ -97,3 +97,27 @@ whether nature shows a *stronger* correlation than the generator.
   could not host the CMSSW image).
 
 Reproduce: `bash train.sh` (auto-uses Apple Metal/MPS, CUDA, or CPU).
+
+## 7. The motivating application: W-boson boost for the W mass
+
+The real target is W&rarr;&ell;&nu;, where the neutrino p_z is unmeasured — the
+longitudinal degree of freedom that forces W-mass analyses onto the transverse mass
+and a PDF-modelled W rapidity distribution (a leading systematic, and central to the
+CDF vs LHC tension). A soft-system boost estimator is an *independent, data-driven*
+handle on that d.o.f. We train the regressor on Z (boost known from the dilepton)
+and apply it to W&rarr;&mu;&nu; (`src/wmass.py`):
+
+- **Z &rarr; W transfer works:** the Z-trained model predicts the W boost with
+  corr 0.28 (p_z) / 0.29 (y_W) on W — as well as in-domain on Z (0.27). The
+  estimator is **portable**, which is the hard part and the key enabler ("Z
+  calibrates W").
+- **Per-event constraint is weak (honest):** y_W spread shrinks only 1.49&rarr;1.43
+  (~4%); reconstructing m_W event-by-event from the soft-predicted &nu; p_z does
+  not beat the no-longitudinal-information case at this resolution.
+- **Where the value is:** an *aggregate* data-driven constraint on the W rapidity
+  distribution (reducing the PDF/longitudinal systematic), orthogonal to the recoil
+  (which only fixes p_T^W) — not a per-event mass. Headroom: heavier models on GPU,
+  more statistics, real-data pileup mitigation, and ultimately training on data
+  where the beam-remnant/ISR modelling is pinned down.
+
+Details and plots: `results/REPORT_wmass.md`. Run: `python -m src.wmass`.

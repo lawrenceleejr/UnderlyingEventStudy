@@ -82,6 +82,24 @@ Targets: `y_Z` (primary — the Lorentz boost rapidity), `pz`, `β_z`.
 Per-particle inputs are longitudinal-info-safe (each particle's own η, log pₜ,
 charge, PUPPI, and azimuth *relative to the Z*; never the muon η/pz).
 
+## The motivating application: W-boson boost for the W mass
+
+The end goal is W&rarr;&ell;&nu;, where the neutrino p_z (the longitudinal d.o.f.)
+is unmeasured — which is why W-mass measurements rely on the transverse mass and a
+PDF-modelled W rapidity distribution. We train the soft-particle boost regressor on
+**Z** (boost known from the dilepton) and apply it to **W&rarr;&mu;&nu;**:
+
+```bash
+PYTHONPATH=/opt/pythia8312/lib:$PWD python -m sim.generate_w --nevents 180000 --out data/skim/w.parquet
+python -m src.wmass --z data/skim/pythia.parquet --w data/skim/w.parquet
+```
+
+The Z-trained estimator transfers to W (corr 0.28–0.29) — the estimator is
+portable. The per-event constraint is currently weak; its realistic value is an
+aggregate, data-driven handle on the W longitudinal kinematics. See
+`results/REPORT_wmass.md`.
+
 ## Results
-See `results/REPORT_pythia.md` (simulation) and, after running path 2,
-`results/REPORT_opendata.md`. `FINDINGS.md` summarizes the physics conclusions.
+See `results/REPORT_pythia.md` (Z simulation), `results/REPORT_wmass.md` (W
+application), and, after running path 2, `results/REPORT_opendata.md`.
+`FINDINGS.md` summarizes the physics conclusions.
