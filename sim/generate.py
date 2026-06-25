@@ -71,6 +71,9 @@ def main():
 
     pieces = []
     kept = 0
+    batch_idx = 0
+    base = args.out[:-8] if args.out.endswith(".parquet") else args.out
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
     def flush():
         nonlocal mu_pt, mu_eta, mu_phi, mu_q, mu_n
@@ -148,16 +151,19 @@ def main():
         if n_in_batch >= args.batch:
             rec = flush()
             if rec is not None and len(rec):
+                # write each batch immediately so partial progress survives interruptions
+                ak.to_parquet(rec, f"{base}_b{batch_idx}.parquet")
+                batch_idx += 1
                 pieces.append(rec); kept += len(rec)
             print(f"  generated {i+1}/{args.nevents} | kept Z {kept}", flush=True)
             n_in_batch = 0
 
     rec = flush()
     if rec is not None and len(rec):
+        ak.to_parquet(rec, f"{base}_b{batch_idx}.parquet")
         pieces.append(rec); kept += len(rec)
 
     data = ak.concatenate(pieces)
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     ak.to_parquet(data, args.out)
     print(f"wrote {len(data)} Z->mumu events -> {args.out}")
     print(f"acceptance: {len(data)}/{args.nevents} = {len(data)/args.nevents:.3f}")
