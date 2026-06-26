@@ -1,0 +1,11 @@
+data/cache/
+data/skim/
+*.root
+__pycache__/
+*.pyc
+results/*.npz
+.ipynb_checkpoints/
+results/*preview*
+results/*smoke*
+results/norm_*.json
+!data/skim/pythia_demo.parquet
