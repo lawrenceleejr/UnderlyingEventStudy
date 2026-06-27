@@ -83,20 +83,38 @@ the Sjöstrand–Skands beam-remnant model ties to the initiator `x` values. Pyt
 itself informative: a model trained on data can be compared against Pythia to test
 whether nature shows a *stronger* correlation than the generator.
 
-## 6. Caveats and next step (real data)
+## 6. Real CMS Open Data — the measurement (DoubleMuon Run2016G)
 
-- These numbers are Pythia8 truth level: no detector resolution, no pileup, full
-  acceptance. Real CMS data has ~20–30 pileup interactions that contaminate the
-  soft/forward event; the pileup-robust handle is central *charged tracks from the
-  primary vertex* (the `central charged` row above is the relevant proxy).
-- The correlation magnitude is tune-dependent; a data measurement is the real test
-  of whether the generator gets it right.
-- The full real-data pipeline is provided (`opendata/run.sh`): it produces the
-  `_allPF` soft tracks from DoubleMuon Run2016G MiniAOD and runs the identical
-  analysis. It needs a machine with Docker + ~100 GB disk (this dev environment
-  could not host the CMSSW image).
+The full real-data pipeline (`opendata/run.sh`) was **run end to end**: the CMSSW
+`10_6_30` open-data container produces `_allPF` soft tracks from DoubleMuon
+Run2016G MiniAOD (record 30505), 232,704 events → **29,600 `Z→μμ`**. Full results
+and figures: `results/REPORT_opendata.md`. Headline:
 
-Reproduce: `bash train.sh` (auto-uses Apple Metal/MPS, CUDA, or CPU).
+- **Pileup washes out the nominal soft event** (⟨730⟩ particles, ~93% pileup):
+  EFN corr(y_Z) ≈ **0.00**, confirming the caveat below.
+- **PUPPI pileup suppression recovers the signal strongly:** on the leading-vertex
+  set (PUPPI>0.5, ⟨49⟩ particles) the EFN reaches
+  **corr(y_Z) = 0.75 ± 0.01 (stat) ± 0.02 (syst, indicative), R² = 0.56, sign acc 0.81** —
+  *higher* than the pileup-free Pythia truth (0.26).
+- **Validated, not leakage:** a label-permutation null test gives corr 0.02; all
+  signal flows through particle η; the correlation is central (|η|<2.5), carried by
+  neutrals and charged alike, and stable vs pileup. Detector η/pT-resolution and
+  PF reco-efficiency systematics are ≤0.02; a conservative charged-only
+  (neutral-PUPPI-independent) cross-check still gives corr 0.45.
+- **Data > Pythia (indicative):** data corr 0.75 vs Monash Pythia 0.26; on the
+  most-matched object (charged-only) 0.45 vs 0.18. The comparison is *not*
+  detector/selection-matched (truth MC, no pileup vs PUPPI-cleaned reconstructed
+  data), so it is an upper bound — but the direction is robust (MPI-off Pythia is
+  *higher*, ruling out MPI as the cause): the data coupling exceeds Monash Pythia.
+  An unfolded measurement would quantify the true gap.
+
+So the original premise holds in **real data**, and more strongly than the
+generator predicts. The pileup-robust handle anticipated below (central charged
+from the PV) is confirmed (corr 0.45), and PUPPI-cleaned neutrals add substantially
+more.
+
+Reproduce: `bash train.sh` (Pythia) or `opendata/run.sh` (real data; needs Docker
++ ~100 GB disk).
 
 ## 7. The motivating application: W-boson boost for the W mass
 
@@ -116,8 +134,32 @@ and apply it to W&rarr;&mu;&nu; (`src/wmass.py`):
   not beat the no-longitudinal-information case at this resolution.
 - **Where the value is:** an *aggregate* data-driven constraint on the W rapidity
   distribution (reducing the PDF/longitudinal systematic), orthogonal to the recoil
-  (which only fixes p_T^W) — not a per-event mass. Headroom: heavier models on GPU,
-  more statistics, real-data pileup mitigation, and ultimately training on data
-  where the beam-remnant/ISR modelling is pinned down.
+  (which only fixes p_T^W) — not a per-event mass.
 
-Details and plots: `results/REPORT_wmass.md`. Run: `python -m src.wmass`.
+### Demonstrated on real data via the Z→μμ closure (the trustworthy test)
+
+Because Pythia under-predicts the effect ~3× (§6), the Pythia W transfer cannot be
+trusted to validate the method — it only tests Pythia's self-consistency. The
+faithful demonstration is on **real Z→μμ data**, where the truth is fully known:
+treat μ2 as the "neutrino" (discard its p_z) to mimic W→ℓν, then put the
+longitudinal d.o.f. back with the soft-event boost via
+`m² = m_T² + 2 pT^ℓ pT^ν (cosh Δy − 1)` (`results/opendata_zmass_closure.png`):
+
+- the transverse mass is biased **−12 GeV** (peaks below m_Z);
+- the **soft-event correction removes the bias** — the reconstructed-mass peak
+  moves onto m_Z (+2 GeV), with per-event tails set by the boost resolution;
+- the truth-Δy closure recovers the sharp m_Z peak (−0.5 GeV).
+
+**Does it sharpen the mass?** A template-fit linearity study (physical mass
+morphing, realistic MET smearing, truth-free ν-p_z reconstruction;
+`results/opendata_mass_linearity.png`) shows all observables fit linearly and
+unbiased, with σ(m_Z): m_T 0.77 vs soft-corrected **0.97** GeV (per 3k). So at the
+current boost resolution the soft-corrected mass **distribution** fit is **~25%
+*worse* than m_T** — resolving the genuine two-fold ν-p_z ambiguity from a noisy
+boost (corr 0.72) *adds* noise. The longitudinal correction does not sharpen the
+mass fit; its realized value is the **aggregate/systematic** handle. (The idealized
+full-dimuon floor, 0.003 GeV with no width/resolution, only marks that *perfect*
+longitudinal info would help.)
+
+Pythia W details: `results/REPORT_wmass.md` (`python -m src.wmass`). Real-data
+demonstrator + mass study: `results/REPORT_opendata.md`.

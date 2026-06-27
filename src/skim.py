@@ -41,6 +41,12 @@ def make_records(m1, m2, z, pf, **soft_kw):
             "beta_z": tgt["beta_z"],
             "mass": tgt["mass"],
             "pt_Z": tgt["pt_Z"],
+            # individual lepton 4-vectors: needed to build the transverse mass and
+            # to test the soft-boost mass correction (treat mu2 as the 'neutrino').
+            "mu1_pt": np.asarray(m1.pt), "mu1_phi": np.asarray(m1.phi),
+            "mu1_pz": np.asarray(m1.pz), "mu1_E": np.asarray(m1.energy),
+            "mu2_pt": np.asarray(m2.pt), "mu2_phi": np.asarray(m2.phi),
+            "mu2_pz": np.asarray(m2.pz), "mu2_E": np.asarray(m2.energy),
             "n_soft": summ["n_soft"],
             "sum_pt": summ["sum_pt"],
             "eta_ptweighted": summ["eta_ptweighted"],
@@ -51,9 +57,21 @@ def make_records(m1, m2, z, pf, **soft_kw):
     return out[finite]
 
 
+def _open_events(path: str):
+    """Locate the 'Events' TTree, whether top-level (Pythia/NanoAOD) or nested
+    under the EDAnalyzer module label (CMSSW TFileService, e.g. 'pfnanolite/Events')."""
+    f = uproot.open(path)
+    if "Events" in f:
+        return f["Events"]
+    for key in f.keys(recursive=True):
+        if key.split(";")[0].rsplit("/", 1)[-1] == "Events":
+            return f[key]
+    raise KeyError(f"no 'Events' tree in {path}; keys={f.keys()}")
+
+
 def process_file(path: str, **soft_kw) -> ak.Array:
     """Return a per-event awkward record array for one local ROOT file."""
-    ev = uproot.open(path)["Events"]
+    ev = _open_events(path)
     arr = ev.arrays(select.MUON_BRANCHES + sp.PF_BRANCHES)
     mask, m1, m2, z = select.zmumu_mask_and_z(arr)
     if mask.sum() == 0:

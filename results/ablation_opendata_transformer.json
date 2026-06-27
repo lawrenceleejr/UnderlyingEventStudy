@@ -1,0 +1,13 @@
+{
+  "PUPPI>0.5 (leading-vertex)": {
+    "rmse": NaN,
+    "mae": NaN,
+    "r2": NaN,
+    "corr": NaN,
+    "bias": NaN,
+    "resolution": NaN,
+    "sign_acc": 0.8231981981981982,
+    "mean_n": 48.33536036036036,
+    "lin_corr": 0.2588846529986846
+  }
+}

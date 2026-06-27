@@ -1,0 +1,18 @@
+{
+  "pz_Z": {
+    "corr": 0.7231520084472118,
+    "r2": 0.5214564570317126,
+    "res_std": 107.07843017578125,
+    "pull_mean": 0.019484685733914375,
+    "pull_width": 1.07413911819458,
+    "png": "/userdata/leejr/UnderlyingEventStudy/results/pz_opendata_pz.png"
+  },
+  "y_Z": {
+    "corr": 0.7643513491097125,
+    "r2": 0.5830747189662815,
+    "res_std": 0.6834662556648254,
+    "pull_mean": 0.016163267195224762,
+    "pull_width": 1.0735551118850708,
+    "png": "/userdata/leejr/UnderlyingEventStudy/results/pz_opendata_pz_yZ.png"
+  }
+}

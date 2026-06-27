@@ -9,3 +9,9 @@ results/*preview*
 results/*smoke*
 results/norm_*.json
 !data/skim/pythia_demo.parquet
+
+# environment + heavy intermediates (added for the open-data analysis)
+.venv/
+work/
+results/diagrams/*.pdf
+results/diagrams/*_raw*.png

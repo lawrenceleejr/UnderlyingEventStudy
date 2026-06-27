@@ -50,17 +50,31 @@ class Splits:
     extra: dict  # event-level scalars per split (for baselines/plots)
 
 
-def _apply_particle_filter(data, abs_eta_max=None, abs_eta_min=None, charged_only=False):
+def _apply_particle_filter(data, abs_eta_max=None, abs_eta_min=None, charged_only=False,
+                           puppi_min=None, neutral_only=False, pileup_addback=None):
     """Mask particles in-place on the jagged p_* columns (for ablations) and
     recompute the event-level summary scalars so baselines stay consistent."""
     eta = data["p_eta"]
     keep = ak.ones_like(eta, dtype=bool)
+    if pileup_addback is not None:
+        # pileup-contamination knob: keep the clean leading-vertex set (puppi>0.5)
+        # plus a random fraction `pileup_addback` of the pileup (puppi<=0.5).
+        prng = np.random.default_rng(909)
+        flat = ak.flatten(data["p_puppi"]); counts = ak.num(data["p_puppi"])
+        r = ak.unflatten(prng.random(len(flat)), counts)
+        keep = keep & ((data["p_puppi"] > 0.5) | (r < pileup_addback))
     if abs_eta_max is not None:
         keep = keep & (abs(eta) < abs_eta_max)
     if abs_eta_min is not None:
         keep = keep & (abs(eta) >= abs_eta_min)
     if charged_only:
         keep = keep & (data["p_charge"] != 0)
+    if neutral_only:
+        keep = keep & (data["p_charge"] == 0)
+    if puppi_min is not None:
+        # PUPPI pileup suppression: in real data the soft event is dominated by
+        # pileup; keeping puppiWeight >= puppi_min isolates the leading-vertex set.
+        keep = keep & (data["p_puppi"] >= puppi_min)
     pcols = [c for c in ak.fields(data) if c.startswith("p_")]
     new = {c: data[c][keep] for c in pcols}
     # recompute summaries from the filtered set
@@ -80,10 +94,43 @@ def _apply_particle_filter(data, abs_eta_max=None, abs_eta_min=None, charged_onl
 
 def load_splits(parquet: str, max_p: int = config.MAX_PARTICLES,
                 targets=tuple(config.TARGETS), seed: int = config.SEED,
-                abs_eta_max=None, abs_eta_min=None, charged_only=False) -> Splits:
+                abs_eta_max=None, abs_eta_min=None, charged_only=False,
+                puppi_min=None, neutral_only=False,
+                mass_lo=None, mass_hi=None,
+                eta_smear=None, pt_smear=None, drop_frac=None, pileup_addback=None) -> Splits:
     data = ak.from_parquet(parquet)
-    if abs_eta_max is not None or abs_eta_min is not None or charged_only:
-        data = _apply_particle_filter(data, abs_eta_max, abs_eta_min, charged_only)
+    # PF reconstruction-efficiency systematic: randomly drop a fraction of
+    # particles (mimics tracking/PF inefficiency). Applied before everything.
+    if drop_frac:
+        prng = np.random.default_rng(31415 + (seed or 0))
+        flat = ak.flatten(data["p_eta"]); counts = ak.num(data["p_eta"])
+        keepmask = ak.unflatten(prng.random(len(flat)) > drop_frac, counts)
+        pcols = [c for c in ak.fields(data) if c.startswith("p_")]
+        newcols = {c: data[c][keepmask] for c in pcols}
+        keep_rest = {c: data[c] for c in ak.fields(data) if not c.startswith("p_")}
+        keep_rest.update(newcols)
+        data = ak.Array(keep_rest)
+    # event-level Z-mass window systematic (the skim already applied 81-101 GeV)
+    if mass_lo is not None or mass_hi is not None:
+        mlo = mass_lo if mass_lo is not None else 0.0
+        mhi = mass_hi if mass_hi is not None else 1e9
+        data = data[(data["mass"] > mlo) & (data["mass"] < mhi)]
+    # detector-resolution systematics: per-particle smearing (uniform scales are
+    # degenerate under per-feature standardization, so we smear, not shift).
+    if eta_smear or pt_smear:
+        prng = np.random.default_rng(20240 + (seed or 0))
+        if pt_smear:   # fractional momentum resolution -> log_pt += N(0, sigma)
+            flat = ak.flatten(data["p_log_pt"]); counts = ak.num(data["p_log_pt"])
+            noise = prng.normal(0.0, pt_smear, size=len(flat))
+            data["p_log_pt"] = ak.unflatten(ak.to_numpy(flat) + noise, counts)
+        if eta_smear:  # eta resolution -> eta += N(0, sigma)
+            flat = ak.flatten(data["p_eta"]); counts = ak.num(data["p_eta"])
+            noise = prng.normal(0.0, eta_smear, size=len(flat))
+            data["p_eta"] = ak.unflatten(ak.to_numpy(flat) + noise, counts)
+    if (abs_eta_max is not None or abs_eta_min is not None or charged_only
+            or puppi_min is not None or neutral_only or pileup_addback is not None):
+        data = _apply_particle_filter(data, abs_eta_max, abs_eta_min, charged_only,
+                                      puppi_min, neutral_only, pileup_addback)
     N = len(data)
     Y = np.stack([np.asarray(data[t]) for t in targets], axis=-1).astype(np.float32)
     X, M = _pad_dense(data, max_p)

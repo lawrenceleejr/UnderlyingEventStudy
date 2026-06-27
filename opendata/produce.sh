@@ -8,19 +8,25 @@
 set -e
 
 source /opt/cms/cmsset_default.sh 2>/dev/null || source /cvmfs/cms.cern.ch/cmsset_default.sh
-cd /home/cmsusr 2>/dev/null || cd ~
+# Build in the mounted /work so the CMSSW dev area + plugin persist across
+# `docker run` invocations (the container is --rm, /home/cmsusr is not mounted).
+cd /work 2>/dev/null || cd /home/cmsusr 2>/dev/null || cd ~
 
 if [ ! -d CMSSW_10_6_30 ]; then
-  echo ">>> cmsrel CMSSW_10_6_30"
-  cmsrel CMSSW_10_6_30
+  # `cmsrel` is an interactive-shell alias that does not exist in a
+  # non-interactive script; call the underlying scram command directly.
+  echo ">>> scramv1 project CMSSW CMSSW_10_6_30"
+  scramv1 project CMSSW CMSSW_10_6_30
 fi
 cd CMSSW_10_6_30/src
 eval "$(scramv1 runtime -sh)"   # cmsenv
 
-# install the PFNanoLite plugin from the mounted repo
-if [ ! -d PFNanoLite ]; then
-  mkdir -p PFNanoLite
-  cp -r /mnt/opendata/PFNanoLite/* PFNanoLite/
+# install the PFNanoLite plugin from the mounted repo.
+# SCRAM requires a Subsystem/Package nesting under src/ (src/<Sub>/<Pkg>/plugins/);
+# a .cc placed only two levels deep (src/PFNanoLite/plugins/) is never compiled.
+if [ ! -d PFNanoLite/PFNanoLite ]; then
+  mkdir -p PFNanoLite/PFNanoLite
+  cp -r /mnt/opendata/PFNanoLite/* PFNanoLite/PFNanoLite/
 fi
 echo ">>> scram b"
 scram b -j"$(nproc)"
