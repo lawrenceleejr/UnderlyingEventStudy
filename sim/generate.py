@@ -68,6 +68,7 @@ def main():
     # flat accumulators; per-event counts -> unflatten at the end
     mu_pt, mu_eta, mu_phi, mu_q, mu_n = [], [], [], [], []
     pf_pt, pf_eta, pf_phi, pf_m, pf_q, pf_id, pf_n = [], [], [], [], [], [], []
+    yboost = []  # per-event partonic-CM boost rapidity y_boost = 1/2 ln(x1/x2)
 
     pieces = []
     kept = 0
@@ -78,6 +79,7 @@ def main():
     def flush():
         nonlocal mu_pt, mu_eta, mu_phi, mu_q, mu_n
         nonlocal pf_pt, pf_eta, pf_phi, pf_m, pf_q, pf_id, pf_n
+        nonlocal yboost
         if not mu_n:
             return None
         mu = ak.zip(
@@ -116,19 +118,30 @@ def main():
             with_name="Momentum4D",
         )
         pf2 = pf[has2]
+        zg = z[good]
         rec = skim.make_records(
-            m1[good], m2[good], z[good], pf2[good],
+            m1[good], m2[good], zg, pf2[good],
             include_neutral=not args.no_neutral, use_pv=False, pt_cap=args.pt_cap,
         )
+        # attach y_boost, masked through the SAME has2 -> good -> finite chain that
+        # make_records applies (finite = isfinite(y_Z) & isfinite(beta_z)).
+        tgt = select.targets(zg)
+        finite = np.isfinite(tgt["y_Z"]) & np.isfinite(tgt["beta_z"])
+        yb = np.array(yboost, np.float64)[ak.to_numpy(has2)][ak.to_numpy(good)][finite]
+        rec = ak.with_field(rec, yb, "y_boost")
         # reset accumulators
         mu_pt, mu_eta, mu_phi, mu_q, mu_n = [], [], [], [], []
         pf_pt, pf_eta, pf_phi, pf_m, pf_q, pf_id, pf_n = [], [], [], [], [], [], []
+        yboost = []
         return rec
 
     n_in_batch = 0
     for i in range(args.nevents):
         if not pythia.next():
             continue
+        _info = pythia.infoPython()
+        x1, x2 = _info.x1(), _info.x2()
+        yboost.append(0.5 * np.log(x1 / x2) if (x1 > 0 and x2 > 0) else np.nan)
         ev = pythia.event
         nm = 0
         npf = 0
