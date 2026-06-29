@@ -74,7 +74,10 @@ SOFT_PT_MIN = 0.5          # charged-track floor in packed PF candidates
 SOFT_PT_CAP = 5.0          # "soft": below this; >cap is hard-recoil, studied via ablation
 TRK_ETA_MAX = 2.5          # tracker acceptance for charged candidates
 NEUTRAL_ETA_MAX = 5.0      # neutrals extend to HF (forward beam-x proxy)
-MUON_VETO_DR = 0.05        # remove the muon footprint from the soft set
+MUON_VETO_DR = 0.4         # remove the muon footprint; MUST be wide for real data:
+# in detector data the muon leaves neutral calo deposits out to dR~0.3 that otherwise
+# let a network reconstruct the muon directions (=> y_Z) and fake a "signal".
+# Truth-level Pythia is insensitive to this (0.05 and 0.40 agree), but data is not.
 MAX_PARTICLES = 400        # padding cap per event for the network
 
 # ----------------------------------------------------------------------------
