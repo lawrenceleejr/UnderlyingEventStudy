@@ -44,6 +44,7 @@ def fmt(x, nd=3):
     return "&mdash;" if x is None or (isinstance(x, float) and x != x) else f"{x:.{nd}f}"
 
 
+data_od = load("metrics_opendata.json")
 rows = headline_rows(main) if main else []
 efn = main["models"]["efn"]["y_Z"] if main else {}
 nompi_efn = nompi["models"]["efn"]["y_Z"] if nompi else None
@@ -83,6 +84,31 @@ if abl:
             f'<span class="num">{fmt(m["sign_acc"])}</span>',
             f'<span class="num">{m["mean_n_particles"]:.0f}</span>',
         ])
+
+# real-data section (honest, post-leak-fix)
+data_block = ""
+if data_od:
+    dl = data_od["models"]["linear"]["y_Z"]
+    de = data_od["models"]["efn"]["y_Z"]
+    data_block = f"""
+  <h2><span class="n">05</span>Reality check on CMS Open Data — and an artifact we caught</h2>
+  <p class="sectsub">Same pipeline on 63k real Z&rarr;&mu;&mu; (DoubleMuon 2016,
+  jets-only PFNano). The first run looked spectacular — and was wrong.</p>
+  <div class="callout warn"><p>With a tight muon veto the network scored corr
+  <b>0.53</b> on data — <em>above</em> truth-level Pythia, which is impossible for a
+  genuine soft signal in pileup-laden data. A shuffled-target control was clean
+  (&minus;0.01), but widening the muon veto from &Delta;R&lt;0.05 to &lt;0.40
+  (removing ~11 neutral deposits/event near the muons) collapsed it to
+  <b>&minus;0.02</b>. The model had been reading the muons' own calorimeter
+  footprint — which fixes y<sub>Z</sub> — not the underlying event.</p></div>
+  <p>The same widening on truth Pythia changes nothing (0.282&rarr;0.273): truth
+  muons leave no deposits, so the simulation results above are robust. The
+  default muon veto is now &Delta;R&lt;0.4. After the fix, the jets-only data
+  retains only a modest <b>corr {fmt(dl['corr'],2)}</b> in simple recoil
+  &eta;-asymmetry observables (the hard jet recoil, not the diffuse soft UE; the
+  raw-particle net collapses to the mean on these 660-particle events). A clean
+  measurement needs the diffuse <code>_allPF</code> tracks + pileup mitigation
+  from <code>opendata/run.sh</code>, not the jets-only sample.</p>"""
 
 nompi_block = ""
 if nompi_efn:
@@ -137,8 +163,8 @@ if wm:
     hypotheses. Truth-p<sub>z</sub> shows the ceiling; the soft-system estimate
     currently overlaps the no-information case — the limit is resolution, not method.</figcaption>
   </figure>
-
-  <h2><span class="n">05</span>What this means</h2>"""
+  {data_block}
+  <h2><span class="n">06</span>What this means</h2>"""
 
 img_pred = b64("pred_vs_true_pythia.png")
 img_res = b64("resolution_pythia.png")
@@ -203,6 +229,7 @@ HTML = f"""<title>Reading the Z boost from the soft event</title>
     padding:18px 22px; border-radius:0 10px 10px 0; margin:24px 0;
     box-shadow:0 1px 2px rgba(20,30,50,.04); }}
   .callout p {{ margin:0; }}
+  .callout.warn {{ border-left-color:var(--warm); background:#FCF4EF; }}
   code {{ font-family:var(--mono); font-size:13px; background:#EEF1F4;
     padding:2px 6px; border-radius:4px; }}
   footer {{ border-top:1px solid var(--line); margin-top:72px; padding-top:24px;
