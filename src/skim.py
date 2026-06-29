@@ -51,15 +51,25 @@ def make_records(m1, m2, z, pf, **soft_kw):
     return out[finite]
 
 
-def process_file(path: str, **soft_kw) -> ak.Array:
-    """Return a per-event awkward record array for one local ROOT file."""
-    ev = uproot.open(path)["Events"]
-    arr = ev.arrays(select.MUON_BRANCHES + sp.PF_BRANCHES)
-    mask, m1, m2, z = select.zmumu_mask_and_z(arr)
-    if mask.sum() == 0:
+def process_file(path: str, step="20000", **soft_kw) -> ak.Array:
+    """Return a per-event awkward record array for one local ROOT file.
+
+    Read in chunks (uproot.iterate) so large PFNano files with hundreds of PF
+    candidates per event don't blow up memory.
+    """
+    pieces = []
+    for arr in uproot.iterate({path: "Events"}, select.MUON_BRANCHES + sp.PF_BRANCHES,
+                              step_size=int(step)):
+        mask, m1, m2, z = select.zmumu_mask_and_z(arr)
+        if mask.sum() == 0:
+            continue
+        pf = sp.build_pfcands(arr)[mask]
+        rec = make_records(m1, m2, z, pf, **soft_kw)
+        if rec is not None and len(rec):
+            pieces.append(rec)
+    if not pieces:
         return None
-    pf = sp.build_pfcands(arr)[mask]
-    return make_records(m1, m2, z, pf, **soft_kw)
+    return ak.concatenate(pieces)
 
 
 def main():
@@ -74,20 +84,26 @@ def main():
     ap.add_argument("--keep-files", action="store_true", help="do not delete downloads")
     ap.add_argument("--local-glob", type=str, default=None,
                     help="process local files matching this glob instead of a record")
+    ap.add_argument("--url-list", type=str, default=None,
+                    help="file with one ROOT URL per line to process")
     args = ap.parse_args()
 
     soft_kw = dict(include_neutral=not args.no_neutral, use_pv=not args.no_pv, pt_cap=args.pt_cap)
 
     if args.local_glob:
         import glob
-        files = sorted(glob.glob(args.local_glob))
-        urls = files
+        urls = sorted(glob.glob(args.local_glob))
         local = True
+    elif args.url_list:
+        urls = [config.to_https(l.strip()) for l in open(args.url_list) if l.strip()]
+        local = False
     else:
         urls = list(io.list_files(args.record))[args.start: args.start + args.nfiles]
         local = False
 
-    print(f"skim: {len(urls)} files | soft={soft_kw}")
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    base = args.out[:-8] if args.out.endswith(".parquet") else args.out
+    print(f"skim: {len(urls)} files | soft={soft_kw}", flush=True)
     pieces = []
     n_evt = 0
     for i, url in enumerate(urls):
@@ -95,6 +111,7 @@ def main():
             path = url if local else io.download(url)
             out = process_file(path, **soft_kw)
             if out is not None and len(out) > 0:
+                ak.to_parquet(out, f"{base}_b{i}.parquet")  # incremental: survives interruption
                 pieces.append(out)
                 n_evt += len(out)
             print(f"  [{i+1}/{len(urls)}] {os.path.basename(path)}: "
@@ -107,9 +124,8 @@ def main():
     if not pieces:
         raise SystemExit("no events skimmed")
     data = ak.concatenate(pieces)
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     ak.to_parquet(data, args.out)
-    print(f"wrote {len(data)} events -> {args.out}")
+    print(f"wrote {len(data)} events -> {args.out}", flush=True)
 
 
 if __name__ == "__main__":
