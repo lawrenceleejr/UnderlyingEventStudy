@@ -83,6 +83,28 @@ the Sjöstrand–Skands beam-remnant model ties to the initiator `x` values. Pyt
 itself informative: a model trained on data can be compared against Pythia to test
 whether nature shows a *stronger* correlation than the generator.
 
+## 5b. Real-data check and the muon-footprint lesson (important)
+
+We ran the identical pipeline on real CMS data (DoubleMuon 2016, jets-only PFNano,
+63k `Z→μμ`). It first appeared to work *too well* — EFN corr 0.53, sign-acc 0.71,
+above truth-level Pythia. That was a **detector artifact**: with a tight muon veto
+(ΔR<0.05), neutral calorimeter deposits from the muons survive near the muon
+directions, and the network reconstructs those directions (which fix `y_Z`). The
+controls:
+
+- shuffled-target control → corr −0.01 (no code/label leak; pipeline sound)
+- widen muon veto to ΔR<0.40 (removes ~11 candidates/event) → corr **−0.02**
+  (signal gone)
+- same widening on truth Pythia → corr 0.282→0.273 (**unchanged** — truth muons
+  leave no deposits, so §1–4 are robust)
+
+After removing the leak (default veto is now ΔR<0.4), the jets-only data shows only
+a modest ~0.20 correlation in simple recoil η-asymmetry observables — the hard jet
+recoil, *not* the diffuse soft UE (jets-only stores only jet constituents). Full
+story: `results/REPORT_opendata.md`. The lesson: **a wide muon veto / explicit
+muon-footprint removal is mandatory in data**, and the jets-only sample is not the
+right one — a real measurement needs `_allPF` tracks (`opendata/run.sh`).
+
 ## 6. Caveats and next step (real data)
 
 - These numbers are Pythia8 truth level: no detector resolution, no pileup, full
