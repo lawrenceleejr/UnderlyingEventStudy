@@ -61,7 +61,11 @@ def main():
     ap.add_argument("--pt-cap", type=float, default=config.SOFT_PT_CAP)
     ap.add_argument("--out", type=str, default="data/skim/pythia.parquet")
     ap.add_argument("--batch", type=int, default=20000)
+    ap.add_argument("--muon-veto", type=float, default=config.MUON_VETO_DR,
+                    help="delta-R cone to remove the muon footprint from the soft set")
     args = ap.parse_args()
+
+    config.MUON_VETO_DR = args.muon_veto  # used inside softparticles.select_soft
 
     pythia = make_pythia(args.seed, args.ecm, not args.no_mpi, args.tune)
 
