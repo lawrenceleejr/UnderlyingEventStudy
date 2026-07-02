@@ -65,7 +65,7 @@ def evaluate(parquet, models=("efn",), epochs=40, tag="pythia", outdir=None,
     best = deep_pred.get(best_model, base_pred.get("gbdt_summary"))[config.PRIMARY_TARGET]
     _plots(yte, best, base_pred, deep_pred, results, tag, outdir, best_model)
     _write_report(results, tag, outdir, best_model)
-    print(f"\nwrote metrics_{tag}.json and REPORT_{tag}.md to {outdir}")
+    print(f"\nwrote metrics_{tag}.json and summary_{tag}.md to {outdir}")
     return results
 
 
@@ -148,7 +148,9 @@ def _write_report(results, tag, outdir, best_model):
         lines.append("")
     lines.append(f"![pred vs true](pred_vs_true_{tag}.png)")
     lines.append(f"![resolution](resolution_{tag}.png)")
-    open(os.path.join(outdir, f"REPORT_{tag}.md"), "w").write("\n".join(lines))
+    # "summary_" not "REPORT_": REPORT_*.md are curated documents that a
+    # reproduce run must never overwrite
+    open(os.path.join(outdir, f"summary_{tag}.md"), "w").write("\n".join(lines))
 
 
 def main():

@@ -1,4 +1,4 @@
-"""I/O helpers: discover CMS Open Data files and open them remotely with uproot."""
+"""I/O helpers: discover and download CMS Open Data files."""
 from __future__ import annotations
 
 import functools
@@ -7,9 +7,18 @@ import time
 from typing import List
 
 import requests
-import uproot
 
 from . import config
+
+
+def _verify():
+    """TLS verification argument for requests.
+
+    Uses the sandbox egress-gateway CA bundle when present (this dev
+    environment re-terminates TLS); on any other machine falls back to the
+    system trust store, which validates opendata.cern.ch normally.
+    """
+    return config.CA_BUNDLE if os.path.exists(config.CA_BUNDLE) else True
 
 
 @functools.lru_cache(maxsize=8)
@@ -20,7 +29,7 @@ def list_files(record: int, https: bool = True) -> tuple:
     each eospublic URI to the reachable HTTPS front-end.
     """
     api = f"https://opendata.cern.ch/api/records/{record}"
-    md = requests.get(api, timeout=60, verify=config.CA_BUNDLE).json()["metadata"]
+    md = requests.get(api, timeout=60, verify=_verify()).json()["metadata"]
     uris: List[str] = []
     for fi in md.get("_file_indices", []):
         for f in fi.get("files", []):
@@ -45,7 +54,7 @@ def download(url: str, dest_dir=None, chunk=4 << 20, retries=4) -> str:
     tmp = path + ".part"
     for attempt in range(retries):
         try:
-            with requests.get(url, stream=True, timeout=120, verify=config.CA_BUNDLE) as r:
+            with requests.get(url, stream=True, timeout=120, verify=_verify()) as r:
                 r.raise_for_status()
                 with open(tmp, "wb") as fh:
                     for blk in r.iter_content(chunk_size=chunk):
@@ -59,14 +68,3 @@ def download(url: str, dest_dir=None, chunk=4 << 20, retries=4) -> str:
                 raise
             time.sleep(2 ** attempt)
     return path
-
-
-def open_events(url: str):
-    """Open the Events TTree of a (possibly remote) NanoAOD/PFNano file."""
-    return uproot.open(url, ssl=config.ssl_context())["Events"]
-
-
-def iterate_events(url: str, branches, step_size="50 MB"):
-    """Yield awkward batches of the requested branches from a remote file."""
-    f = uproot.open(url, ssl=config.ssl_context())
-    yield from f["Events"].iterate(branches, step_size=step_size)

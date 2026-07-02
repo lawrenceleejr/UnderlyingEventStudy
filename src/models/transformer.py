@@ -28,6 +28,13 @@ class ParticleTransformer(nn.Module):
         # x: [B,P,F]  mask: [B,P] (1=real, 0=pad)
         h = self.embed(x)
         pad = mask < 0.5  # True where padded -> ignored by attention
+        # a fully-padded event would give an all-True row, which returns NaN
+        # from masked attention on some torch versions; unmask its first slot
+        # (the row is zeroed by the mask multiply below anyway)
+        empty = pad.all(dim=1)
+        if empty.any():
+            pad = pad.clone()
+            pad[empty, 0] = False
         h = self.encoder(h, src_key_padding_mask=pad)
         h = h * mask.unsqueeze(-1)
         n = mask.sum(dim=1, keepdim=True).clamp(min=1.0)

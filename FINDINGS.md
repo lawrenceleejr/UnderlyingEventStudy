@@ -93,8 +93,9 @@ directions, and the network reconstructs those directions (which fix `y_Z`). The
 controls:
 
 - shuffled-target control → corr −0.01 (no code/label leak; pipeline sound)
-- widen muon veto to ΔR<0.40 (removes ~11 candidates/event) → corr **−0.02**
-  (signal gone)
+- widen muon veto to ΔR<0.40 → signal gone: corr **−0.02** in the initial
+  12k-event diagnostic, **+0.01** in the full 63k re-skim
+  (`results/metrics_opendata.json`) — both consistent with zero
 - same widening on truth Pythia → corr 0.282→0.273 (**unchanged** — truth muons
   leave no deposits, so §1–4 are robust)
 
@@ -113,10 +114,21 @@ right one — a real measurement needs `_allPF` tracks (`opendata/run.sh`).
   primary vertex* (the `central charged` row above is the relevant proxy).
 - The correlation magnitude is tune-dependent; a data measurement is the real test
   of whether the generator gets it right.
-- The full real-data pipeline is provided (`opendata/run.sh`): it produces the
-  `_allPF` soft tracks from DoubleMuon Run2016G MiniAOD and runs the identical
-  analysis. It needs a machine with Docker + ~100 GB disk (this dev environment
-  could not host the CMSSW image).
+- **Veto-hole channel:** removing ΔR<0.4 cones around the muons deletes particles
+  *as a function of the muon directions*, so in principle a network could locate
+  the two depleted cones and infer the muon η (→ y_Z). At truth level the
+  0.05→0.40 comparison (corr 0.282→0.273) bounds any hole contribution at the
+  percent level, and in data the widened veto *killed* the apparent signal rather
+  than creating one — but a dedicated control (e.g. embedding fake cones at random
+  η) is the right referee-proof answer and is left as future work.
+- **Truncation:** the network reads the `MAX_PARTICLES` highest-pT particles
+  (400 by default). Pythia events (⟨n⟩≈72) are never truncated; real-data events
+  with neutrals included exceed this (⟨n⟩≈650) and lose their softest tail —
+  charged-PV-only data (⟨n⟩≈30) is unaffected.
+- **Data muon selection:** real-data Z candidates use PF muons and the mass
+  window only (no muon ID / isolation / trigger requirement — pat::Muon flags are
+  not in the decoded branches). The on-shell mass window keeps this pure enough
+  for a boost regression, but it is not a muon-ID-grade selection.
 
 Reproduce: `bash train.sh` (auto-uses Apple Metal/MPS, CUDA, or CPU).
 

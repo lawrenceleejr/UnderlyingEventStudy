@@ -54,8 +54,9 @@ def to_https(uri: str) -> str:
 # Dev fixture: DoubleMuon Run2016G NanoAOD-PF (record 31305). PFCands here are
 # JET-CONSTITUENTS ONLY -> good for plumbing, NOT a true underlying-event sample.
 RECORD_PFNANO_JETSONLY = 31305
-# Real soft tracks come from DoubleMuon Run2016G MiniAOD (record 30505) after a
-# one-time CMSSW "_allPF" production (see docker/).
+# Real soft tracks come from DoubleMuon Run2016G MiniAOD (record 30505), read
+# directly with uproot (src/miniaod.py decodes packedPFCandidates — no CMSSW).
+# opendata/ additionally ships a CMSSW-based flattener for cross-checks.
 RECORD_MINIAOD = 30505
 
 # ----------------------------------------------------------------------------

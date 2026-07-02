@@ -101,7 +101,11 @@ def select_soft(
 
     keep_charged = charged & soft_pt & in_trk
     if use_pv:
-        # pvAssocQuality >= 5 (UsedInFitTight/Loose) suppresses pileup tracks
+        # pvAssocQuality >= 5 keeps CompatibilityDz(5)/UsedInFitLoose(6)/
+        # UsedInFitTight(7) — the standard fromPV-style pileup rejection.
+        # Neutrals carry no vertex information and receive no cut here; their
+        # pileup handling is the PUPPI weight feature (or exclusion via
+        # include_neutral=False / charged_only ablations).
         keep_charged = keep_charged & (pf.pvq >= 5)
 
     if include_neutral:

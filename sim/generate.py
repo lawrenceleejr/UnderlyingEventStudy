@@ -165,10 +165,17 @@ def main():
     rec = flush()
     if rec is not None and len(rec):
         ak.to_parquet(rec, f"{base}_b{batch_idx}.parquet")
+        batch_idx += 1
         pieces.append(rec); kept += len(rec)
 
+    if not pieces:
+        raise SystemExit("no Z->mumu events passed the selection (increase --nevents)")
     data = ak.concatenate(pieces)
     ak.to_parquet(data, args.out)
+    for b in range(batch_idx):  # shards served their purpose
+        shard = f"{base}_b{b}.parquet"
+        if os.path.exists(shard):
+            os.remove(shard)
     print(f"wrote {len(data)} Z->mumu events -> {args.out}")
     print(f"acceptance: {len(data)}/{args.nevents} = {len(data)/args.nevents:.3f}")
 

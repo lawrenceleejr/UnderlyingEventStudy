@@ -16,12 +16,21 @@ relies on — and the soft-system boost estimator is portable across the two.
 
 ![Z->W transfer](wtransfer_pz.png)
 
-## 2. How strong is the per-event constraint? (honest: weak)
+## 2. How strong is the per-event constraint? (honest: not useful per event)
 The prior spread of y_W is 1.49; conditioning on the soft system gives a
-residual spread of 1.43 — only a **4% reduction**. With
-corr&nbsp;&approx;&nbsp;0.29 the soft event explains &approx;8% of the boost
-variance, so per event the neutrino p_z is still loosely constrained
-(RMS &approx; 266 GeV).
+residual spread of 1.43 — a **4% reduction**, i.e. the soft event explains only
+corr&sup2; &approx; 8% of the boost variance.
+
+Propagated to the neutrino, the soft-system estimate is **worse than assuming
+&nu;&nbsp;p_z&nbsp;=&nbsp;0**: subtracting the muon p_z from a weakly-correlated
+W-p_z prediction leaves a residual dominated by &minus;&mu;-p_z, giving
+corr(&nu;-p_z) = &minus;0.59 and RMSE 266 GeV versus 202 GeV for the zero
+hypothesis (`results/wmass.json`: `nu_pz` vs `nu_pz_noinfo_rms`). Per event this
+estimator should NOT be used for the neutrino; its value is aggregate (Sec. 4).
+
+*Methodological note:* the Z training sample removes two ΔR&lt;0.4 muon cones
+while the W application removes one — a small, documented domain difference on
+top of the different lepton kinematics (single-μ 25 GeV vs dimuon 20/10 GeV).
 
 ## 3. Reconstructed m_W per event (no improvement yet)
 | &nu; p_z hypothesis | median m_W [GeV] | resolution 60&ndash;100 GeV |

@@ -1,11 +1,13 @@
-data/cache/
-data/skim/
-*.root
 __pycache__/
 *.pyc
-results/*.npz
 .ipynb_checkpoints/
+# bulk data: cache and skims are regenerable; the demo parquet is whitelisted
+data/cache/
+data/skim/*
+!data/skim/pythia_demo.parquet
+*.root
+# per-run intermediates
+results/*.npz
 results/*preview*
 results/*smoke*
 results/norm_*.json
-!data/skim/pythia_demo.parquet

@@ -33,7 +33,10 @@ def make_records(m1, m2, z, pf, **soft_kw):
     tgt = select.targets(z)
     soft = sp.select_soft(pf, m1, m2, z, **soft_kw)
     summ = sp.event_summary(soft)
-    finite = np.isfinite(tgt["y_Z"]) & np.isfinite(tgt["beta_z"])
+    # drop events with an empty soft set: they carry no information and a
+    # fully-padded row is a NaN hazard for masked attention on some torch versions
+    finite = (np.isfinite(tgt["y_Z"]) & np.isfinite(tgt["beta_z"])
+              & (summ["n_soft"] > 0))
     out = ak.Array(
         {
             "y_Z": tgt["y_Z"],
@@ -81,6 +84,9 @@ def main():
     ap.add_argument("--no-neutral", action="store_true")
     ap.add_argument("--no-pv", action="store_true")
     ap.add_argument("--pt-cap", type=float, default=config.SOFT_PT_CAP)
+    ap.add_argument("--muon-veto", type=float, default=config.MUON_VETO_DR,
+                    help="delta-R cone removed around each muon (default from config; "
+                         "keep wide >=0.3 on detector data — see REPORT_opendata)")
     ap.add_argument("--keep-files", action="store_true", help="do not delete downloads")
     ap.add_argument("--local-glob", type=str, default=None,
                     help="process local files matching this glob instead of a record")
@@ -90,6 +96,7 @@ def main():
                     help="inputs are raw MiniAOD: decode packedPFCandidates directly (src.miniaod)")
     args = ap.parse_args()
 
+    config.MUON_VETO_DR = args.muon_veto  # read inside softparticles.select_soft
     soft_kw = dict(include_neutral=not args.no_neutral, use_pv=not args.no_pv, pt_cap=args.pt_cap)
 
     if args.miniaod:
@@ -133,6 +140,11 @@ def main():
         raise SystemExit("no events skimmed")
     data = ak.concatenate(pieces)
     ak.to_parquet(data, args.out)
+    # incremental shards served their purpose once the combined file is safe
+    for i in range(len(urls)):
+        shard = f"{base}_b{i}.parquet"
+        if os.path.exists(shard):
+            os.remove(shard)
     print(f"wrote {len(data)} events -> {args.out}", flush=True)
 
 

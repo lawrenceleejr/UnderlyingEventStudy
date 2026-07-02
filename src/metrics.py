@@ -10,11 +10,13 @@ def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     res = y_pred - y_true
     ss_res = np.sum(res ** 2)
     ss_tot = np.sum((y_true - y_true.mean()) ** 2) + 1e-12
+    # a constant predictor has zero variance -> correlation undefined; report 0
+    corr = 0.0 if y_pred.std() < 1e-12 else float(np.corrcoef(y_true, y_pred)[0, 1])
     m = {
         "rmse": float(np.sqrt(np.mean(res ** 2))),
         "mae": float(np.mean(np.abs(res))),
         "r2": float(1 - ss_res / ss_tot),
-        "corr": float(np.corrcoef(y_true, y_pred)[0, 1]),
+        "corr": corr,
         "bias": float(res.mean()),
         "resolution": float(res.std()),
     }
