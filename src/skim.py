@@ -86,9 +86,17 @@ def main():
                     help="process local files matching this glob instead of a record")
     ap.add_argument("--url-list", type=str, default=None,
                     help="file with one ROOT URL per line to process")
+    ap.add_argument("--miniaod", action="store_true",
+                    help="inputs are raw MiniAOD: decode packedPFCandidates directly (src.miniaod)")
     args = ap.parse_args()
 
     soft_kw = dict(include_neutral=not args.no_neutral, use_pv=not args.no_pv, pt_cap=args.pt_cap)
+
+    if args.miniaod:
+        from . import miniaod
+        file_processor = miniaod.process_file
+    else:
+        file_processor = process_file
 
     if args.local_glob:
         import glob
@@ -109,7 +117,7 @@ def main():
     for i, url in enumerate(urls):
         try:
             path = url if local else io.download(url)
-            out = process_file(path, **soft_kw)
+            out = file_processor(path, **soft_kw)
             if out is not None and len(out) > 0:
                 ak.to_parquet(out, f"{base}_b{i}.parquet")  # incremental: survives interruption
                 pieces.append(out)
