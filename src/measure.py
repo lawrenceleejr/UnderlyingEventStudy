@@ -63,30 +63,38 @@ def _run_variant(parquet: str, label: str, max_p: int, epochs: int,
     return out
 
 
+VARIANTS = {
+    "charged_pv": dict(max_p=200, charged_only=True, abs_eta_max=config.TRK_ETA_MAX),
+    "full": dict(max_p=500),
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/skim/miniaod.parquet")
     ap.add_argument("--sim", default="data/skim/pythia.parquet")
     ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--only", nargs="*", default=None,
+                    help="subset like: data/charged_pv sim/full (default: all)")
     ap.add_argument("--out", default=str(config.RESULTS / "metrics_measurement.json"))
     args = ap.parse_args()
 
-    results = {}
+    # merge into any existing results so variants can run as separate jobs
+    results = json.load(open(args.out)) if os.path.exists(args.out) else {}
     for src, parquet in [("data", args.data), ("sim", args.sim)]:
         if not os.path.exists(parquet):
             print(f"skip {src}: {parquet} not found")
             continue
-        results[src] = {}
-        print(f"== {src}: {parquet} ==", flush=True)
-        results[src]["charged_pv"] = _run_variant(
-            parquet, f"{src}/charged-PV", max_p=200, epochs=args.epochs,
-            device=args.device, charged_only=True, abs_eta_max=config.TRK_ETA_MAX)
-        results[src]["full"] = _run_variant(
-            parquet, f"{src}/full", max_p=500, epochs=args.epochs,
-            device=args.device)
-
-    json.dump(results, open(args.out, "w"), indent=2)
+        for vname, vkw in VARIANTS.items():
+            if args.only and f"{src}/{vname}" not in args.only:
+                continue
+            kw = dict(vkw)
+            max_p = kw.pop("max_p")
+            results.setdefault(src, {})[vname] = _run_variant(
+                parquet, f"{src}/{vname}", max_p=max_p, epochs=args.epochs,
+                device=args.device, **kw)
+            json.dump(results, open(args.out, "w"), indent=2)  # incremental
     print(f"wrote {args.out}")
 
 
