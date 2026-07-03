@@ -1,73 +1,88 @@
-# Real CMS Open Data result (DoubleMuon 2016) — and an important artifact
+# The real-data measurement: the soft underlying event predicts the Z boost in CMS collision data
 
-**TL;DR.** The accessible flat open-data sample (jets-only PFNano, record 31305)
-cannot deliver a clean soft-underlying-event measurement, for two reasons we
-demonstrate below: (1) its PF candidates are *jet constituents*, not the diffuse
-soft UE, and (2) a naive muon veto lets the detector's **muon footprint leak the
-muon directions** into the "soft" set and fake a strong signal. After removing
-that leak, no genuine soft-UE boost signal is seen beyond a modest ~0.20
-correlation in simple recoil observables. The clean measurement needs the full
-`_allPF` soft tracks + pileup mitigation produced by `opendata/run.sh`.
+**Headline.** In 141,965 `Z→μμ` events from CMS DoubleMuon Run2016G open data,
+a deep-set regressor trained on **only the soft, PV-associated charged particles**
+(⟨28⟩ per event, muons and their footprint removed) predicts the Z rapidity with
 
-## Sample
-- DoubleMuon Run2016G, jets-only PFNano (record 31305), streamed over HTTPS.
-- 63,112 `Z→μμ` events (8 files), Z mass peak at **90.7 GeV** (selection validated).
-- Pileup ~20–30 interactions; ⟨n_soft⟩ ≈ 660 candidates/event (jet constituents).
+> **corr(pred, true y_Z) = 0.142 ± 0.007** (≈21σ from zero), sign accuracy 55.0%
 
-## The muon-footprint artifact (and how we caught it)
-With a tight muon veto (ΔR<0.05), the EFN appeared to predict `y_Z` extremely
-well — corr **0.53**, sign-accuracy **0.71** — far above truth-level Pythia
-(0.26) and the linear baseline on the same data (0.03). That is physically
-impossible for a genuine soft-UE signal (real data has pileup + detector smearing
-that can only *degrade* it). Diagnostics:
+against a shuffled-target control of 0.005. To our knowledge this is the first
+demonstration in real collision data that the soft event carries measurable
+information about the hard scatter's longitudinal boost. The matched Pythia8
+prediction is 0.200 ± 0.009 — data retains about 70% of the simulated
+correlation, consistent with detector resolution, PF/vertex-association
+impurity, and residual pileup.
 
-| test | corr(y_Z) | note |
-|---|---|---|
-| nominal, ΔR<0.05 veto | 0.53 | suspicious |
-| **shuffled target** | −0.01 | no code/label leak — pipeline is sound |
-| central charged only | 0.10 | weak |
-| forward only | 0.01 | ~nothing |
-| **muon veto widened to ΔR<0.40** | **−0.02** | **signal gone** |
+## How the data was read (no CMSSW)
 
-Widening the muon veto removed only ~11 candidates/event (neutral calo deposits in
-the 0.05–0.40 annulus around the muons) yet destroyed the entire signal. The
-network had been **reconstructing the muon directions from their detector
-footprint** — and the two muon directions fix `y_Z` almost exactly. It was never
-the underlying event.
+The diffuse soft tracks exist only in MiniAOD's `packedPFCandidates`.
+`src/miniaod.py` decodes CMS's packed format **directly with uproot** — IEEE
+half-precision minifloats for pT/m/dz, scaled int16 for η/φ, PV-association
+quality bits, and the associated-vertex key — turning full MiniAOD collision
+data into analysis arrays with no CMSSW, no Docker. Validation: symmetric η/φ
+distributions, dz(PV tracks) peaked at 0, Z peak at **90.7 GeV** from PF muons
+(13.5% selection efficiency, matching the PFNano-based selection).
 
-Control: the same widening on **truth-level Pythia** changes nothing
-(corr 0.282→0.273), because truth muons leave no detector deposits. So the
-simulation result (`FINDINGS.md`) is robust; only the data was contaminated. The
-default muon veto is now ΔR<0.4 (`src/config.py`).
+Selection: two OS PF muons (pT > 20/10 GeV, |η| < 2.4), 81 < m_μμ < 101 GeV.
+Soft set: 0.5 < pT < 5 GeV, ΔR > 0.4 from either muon; *charged-PV* variant
+requires association to the leading PV with quality ≥ CompatibilityDz.
 
-## Honest result after removing the leak (ΔR<0.4 veto)
+## The measurement matrix
 
-| model | corr(y_Z) | R² | sign acc |
-|---|---|---|---|
-| predict-the-mean | – | 0.00 | 0.50 |
-| linear on recoil-summary obs | **0.20** | 0.04 | 0.58 |
-| GBDT on recoil-summary obs | 0.21 | 0.04 | 0.58 |
-| Energy Flow Network | 0.01 | 0.00 | 0.50 |
+| variant | ⟨n⟩ | linear | GBDT rich | **EFN** | sign acc | shuffle ctrl |
+|---|---|---|---|---|---|---|
+| **DATA · charged-PV** | 28 | 0.046 | 0.130 | **0.142 ± 0.007** | 0.550 | 0.005 |
+| SIM · charged-PV (Pythia8) | 37 | 0.099 | 0.176 | **0.200 ± 0.009** | 0.571 | −0.001 |
+| DATA · full (+neutrals) | 469 | — | — | see metrics json | — | — |
+| SIM · full (truth, no PU) | 72 | 0.159 | 0.241 | **0.268 ± 0.009** | 0.588 | 0.008 |
 
-- A genuine but modest **~0.20** correlation survives in the simple η-pₜ-asymmetry
-  of the jet constituents. This is the **hard hadronic recoil** (jet fragmentation
-  balancing the Z), *not* the diffuse soft underlying event — an artifact of the
-  jets-only sample, which only stores particles clustered into jets.
-- The raw-particle EFN collapses to the mean here (checked at lr 1e-3/3e-3/1e-2):
-  the weak, global η-asymmetry is swamped in ~660-particle events and a sum-pooled
-  deep set does not recover what the pre-normalized engineered observable exposes
-  directly. (On the clean Pythia soft event the EFN *does* beat the linear
-  baseline — the difference is sample quality and signal strength, not the
-  architecture.)
+(`results/metrics_measurement.json`; errors are Fisher standard errors.)
 
-## What a real measurement needs
-1. **The diffuse soft tracks** — `_allPF` content (all `packedPFCandidates` +
-   `lostTracks`), not jet constituents. Produced by `opendata/run.sh` /
-   `PFNanoLite` from DoubleMuon MiniAOD (record 30505) on a machine with Docker +
-   adequate disk.
-2. **Pileup mitigation** — charged tracks from the primary vertex (PUPPI / fromPV);
-   the forward neutral region is pileup-dominated in 2016 data.
-3. **A wide muon veto** (ΔR≳0.3) or explicit removal of the muons' PF footprint —
-   the lesson above.
+Reading the table:
+- **The signal is real in data** and needs more than a simple η-asymmetry: the
+  linear baseline nearly vanishes in data (0.046) while the deep set and the
+  rich engineered baseline extract 0.13–0.14 — in data the information sits in
+  subtler correlations than in truth-level simulation.
+- **Data/sim ratio ≈ 0.7** in the matched charged-PV variant. Pythia transports
+  more longitudinal information into the soft charged event than survives in
+  detector data — a statement a tuned generator comparison could sharpen into a
+  constraint on beam-remnant/ISR modelling.
+- The full variant with neutrals adds nothing in data (neutrals carry no vertex
+  association and ~25 pileup interactions of contamination) while helping in
+  truth-level sim — quantifying how much of the truth-level signal pileup burns.
 
-Reproduce this jets-only check: `python -m src.skim --record 31305 --nfiles 8 --out data/skim/opendata.parquet && python -m src.evaluate --parquet data/skim/opendata.parquet --tag opendata`.
+## The artifact this measurement had to survive (integrity control)
+
+An earlier pass on the *jets-only* PFNano derived sample (record 31305) with a
+tight ΔR < 0.05 muon veto produced corr = 0.53 — spectacular and **wrong**:
+
+| test | corr(y_Z) |
+|---|---|
+| tight veto (ΔR<0.05) | 0.53 |
+| shuffled target | −0.01 (pipeline clean) |
+| **veto widened to ΔR<0.40** | **≈ 0 (signal gone)** |
+| same widening, truth Pythia | 0.282→0.273 (unchanged) |
+
+The network had been reading the muons' own calorimeter deposits near the muon
+directions (which fix y_Z), not the underlying event. Every number in the table
+above therefore uses the wide ΔR < 0.4 veto, and the shuffled-target control is
+run per variant. The jets-only sample itself is unusable for this measurement —
+its PF candidates are jet constituents, not the diffuse soft event.
+
+## Caveats
+- PF-muon Z selection (no muon-ID flags in the decoded branches); the on-shell
+  mass window supplies purity.
+- PUPPI weights are not decoded (nonlinear 8-bit packing); charged-PV
+  association carries the pileup suppression, neutrals get none.
+- corr = 0.142 means the soft event explains ~2% of the y_Z variance per event —
+  this is an existence measurement and a generator-modelling probe, not a
+  per-event kinematic constraint (see REPORT_wmass for the aggregate use case).
+- Veto-hole information channel bounded small at truth level (0.282→0.273) but
+  not yet excluded with a dedicated embedding control.
+
+## Reproduce
+
+```bash
+python -m src.skim --miniaod --record 30505 --nfiles 20 --out data/skim/miniaod.parquet
+python -m src.measure --data data/skim/miniaod.parquet --sim data/skim/pythia.parquet
+```
