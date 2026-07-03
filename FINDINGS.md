@@ -59,16 +59,16 @@ Same EFN, restricted to particle subsets of the same events:
 
 | subset | corr(y_Z) | sign acc | ⟨n particles⟩ |
 |---|---|---|---|
-| full (\|η\|<5, all) | 0.26 | 0.59 | 74 |
-| central (\|η\|<2.5, all) | 0.22 | 0.57 | 59 |
-| central charged (\|η\|<2.5) | 0.19 | 0.56 | 38 |
-| forward only (\|η\|>2.5) | 0.16 | 0.55 | 15 |
+| full (\|η\|<5, all) | 0.27 | 0.59 | 72 |
+| central (\|η\|<2.5, all) | 0.23 | 0.58 | 57 |
+| central charged (\|η\|<2.5) | 0.20 | 0.57 | 37 |
+| forward only (\|η\|>2.5) | 0.16 | 0.54 | 15 |
 
 - The signal is **distributed across the whole soft event**, not concentrated in
   one region; the full event is best.
 - Crucially, the **detector-measurable central *charged* underlying event alone**
-  (`|η|<2.5`, tracks) reaches corr 0.19 — i.e. the effect should be visible with a
-  real tracker, not only with forward calorimetry.
+  (`|η|<2.5`, tracks) reaches corr 0.20 — the subset the real-data measurement
+  (§0) then confirms at 0.142 in collision data.
 - Forward-only has few particles (⟨15⟩) but is individually informative.
 
 ## 3. MPI dilutes the signal (underlying-event ablation)
@@ -78,8 +78,8 @@ sense is removed; only ISR/FSR + beam-remnant fragmentation remain):
 
 | sample | corr(y_Z) | sign acc | ⟨n particles⟩ |
 |---|---|---|---|
-| MPI on (nominal) | 0.26 | 0.59 | 74 |
-| **MPI off** | **0.35** | **0.61** | 17 |
+| MPI on (nominal) | 0.27 | 0.59 | 72 |
+| **MPI off** | **0.34** | **0.62** | 17 |
 
 Turning MPI off *raises* the correlation despite ~4× fewer particles. The boost
 information is carried by the fragmentation tied to the primary scatter's

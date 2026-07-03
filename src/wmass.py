@@ -99,6 +99,11 @@ corr(&nu;-p_z) = {R['nu_pz']['corr']:.2f} and RMSE {R['nu_pz']['rmse']:.0f} GeV
 versus {R['nu_pz_noinfo_rms']:.0f} GeV for the zero hypothesis. Per event, this
 estimator should NOT be used for the neutrino; its value is aggregate (Sec. 4).
 
+*Methodological note:* the Z training sample removes two &Delta;R&lt;0.4 muon
+cones while the W application removes one — a small, documented domain
+difference on top of the different lepton kinematics (single-&mu; 25 GeV vs
+dimuon 20/10 GeV).
+
 ## 3. Reconstructed m_W per event (no improvement yet)
 | &nu; p_z hypothesis | median m_W [GeV] | resolution 60&ndash;100 GeV |
 |---|---|---|

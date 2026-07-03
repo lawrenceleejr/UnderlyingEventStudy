@@ -6,9 +6,9 @@ apply it to **W&rarr;&mu;&nu;** (boost unknown), then ask what it buys for the W
 ## 1. Z &rarr; W transfer — the key enabler (it works)
 | quantity | corr |
 |---|---|
-| p_z (Z test, in-domain) | 0.270 |
-| **p_z (Z-trained, applied to W)** | **0.283** |
-| y_W (Z-trained, applied to W) | 0.290 |
+| p_z (Z test, in-domain) | 0.288 |
+| **p_z (Z-trained, applied to W)** | **0.278** |
+| y_W (Z-trained, applied to W) | 0.282 |
 
 A model trained only on Z predicts the **W** longitudinal boost as well as it does
 in-domain on Z. Z genuinely calibrates W — the premise the whole W-mass programme
@@ -18,25 +18,27 @@ relies on — and the soft-system boost estimator is portable across the two.
 
 ## 2. How strong is the per-event constraint? (honest: not useful per event)
 The prior spread of y_W is 1.49; conditioning on the soft system gives a
-residual spread of 1.43 — a **4% reduction**, i.e. the soft event explains only
-corr&sup2; &approx; 8% of the boost variance.
+residual spread of 1.43 — a **4% reduction**, i.e. the soft
+event explains only corr&sup2; &approx; 8% of
+the boost variance.
 
 Propagated to the neutrino, the soft-system estimate is **worse than assuming
 &nu;&nbsp;p_z&nbsp;=&nbsp;0**: subtracting the muon p_z from a weakly-correlated
 W-p_z prediction leaves a residual dominated by &minus;&mu;-p_z, giving
-corr(&nu;-p_z) = &minus;0.59 and RMSE 266 GeV versus 202 GeV for the zero
-hypothesis (`results/wmass.json`: `nu_pz` vs `nu_pz_noinfo_rms`). Per event this
+corr(&nu;-p_z) = -0.56 and RMSE 268 GeV
+versus 205 GeV for the zero hypothesis. Per event, this
 estimator should NOT be used for the neutrino; its value is aggregate (Sec. 4).
 
-*Methodological note:* the Z training sample removes two ΔR&lt;0.4 muon cones
-while the W application removes one — a small, documented domain difference on
-top of the different lepton kinematics (single-μ 25 GeV vs dimuon 20/10 GeV).
+*Methodological note:* the Z training sample removes two &Delta;R&lt;0.4 muon
+cones while the W application removes one — a small, documented domain
+difference on top of the different lepton kinematics (single-&mu; 25 GeV vs
+dimuon 20/10 GeV).
 
 ## 3. Reconstructed m_W per event (no improvement yet)
 | &nu; p_z hypothesis | median m_W [GeV] | resolution 60&ndash;100 GeV |
 |---|---|---|
-| truth (ideal check) | 80.30 | sharp |
-| soft-system | 80.38 | 9.9 GeV |
+| truth (ideal check) | 80.28 | sharp |
+| soft-system | 80.52 | 10.0 GeV |
 | none (p_z = 0) | – | 9.9 GeV |
 
 ![mW reco](wmass_reco.png)

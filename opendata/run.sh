@@ -38,12 +38,14 @@ docker run --rm -e MAXEVENTS="${MAXEVENTS}" \
     -v "${REPO}:/mnt:ro" -v "${WORK}:/work" \
     "${IMAGE}" bash /mnt/opendata/produce.sh
 
-echo "== 4. skim -> parquet, then train/evaluate =="
+echo "== 4. skim -> parquet, then train/evaluate (decoder cross-check) =="
 cd "${REPO}"
 # charged tracks carry real pileup in data: keep PV-associated (use_pv default on)
 python3 -m src.skim --local-glob "${WORK}/ntuples/*.root" \
-    --out data/skim/opendata.parquet
-python3 -m src.evaluate --parquet data/skim/opendata.parquet \
-    --models efn transformer --tag opendata
+    --out data/skim/pfnanolite_xcheck.parquet
+# distinct tag: never overwrite the flagship metrics (src/miniaod.py path)
+python3 -m src.evaluate --parquet data/skim/pfnanolite_xcheck.parquet \
+    --models efn --tag pfnanolite_xcheck
 
-echo "== done. See results/REPORT_opendata.md =="
+echo "== done. Compare results/metrics_pfnanolite_xcheck.json against"
+echo "   results/metrics_measurement.json (data variants) — they should agree."
