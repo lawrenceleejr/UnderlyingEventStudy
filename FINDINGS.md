@@ -89,11 +89,14 @@ MPI "underlying event" per se.
 
 ## 4. Architecture cross-check (EFN vs Particle Transformer)
 
-On a matched held-out subsample, a permutation-invariant Particle Transformer and
-the Energy Flow Network agree closely (corr ≈ 0.25 vs 0.23), both well above the
-hand-built-observable baselines (≈ 0.16). The signal is in the data, not an
-artefact of one architecture. (The Transformer is the heavier model; on a Mac M2
-GPU via `train.sh` it trains comfortably — on CPU it is the slow path.)
+On the committed 35k-event demo set (`results/metrics_modelcompare.json`), the
+Energy Flow Network reaches corr 0.257 and a permutation-invariant Particle
+Transformer 0.243 — architectures agree, both above the rich engineered baseline
+(0.220). The signal is in the data, not an artefact of one architecture. (The
+Transformer is the heavier model; on a Mac M2 GPU via `train.sh` it trains
+comfortably — on CPU it is the slow path. Reproduce:
+`python -m src.evaluate --parquet data/skim/pythia_demo.parquet --models efn
+transformer --tag modelcompare --max-p 120`.)
 
 ## 5. Relation to the original hypothesis
 
