@@ -32,11 +32,12 @@ requires association to the leading PV with quality ≥ CompatibilityDz.
 | variant | ⟨n⟩ | linear | GBDT rich | **EFN** | sign acc | shuffle ctrl |
 |---|---|---|---|---|---|---|
 | **DATA · charged-PV** | 28 | 0.046 | 0.130 | **0.142 ± 0.007** | 0.550 | 0.005 |
+| DATA · full (+neutrals) | 468 | 0.093 | 0.104 | 0.003 | 0.497 | −0.001 |
 | SIM · charged-PV (Pythia8) | 37 | 0.099 | 0.176 | **0.200 ± 0.009** | 0.571 | −0.001 |
-| DATA · full (+neutrals) | 469 | — | — | see metrics json | — | — |
 | SIM · full (truth, no PU) | 72 | 0.159 | 0.241 | **0.268 ± 0.009** | 0.588 | 0.008 |
 
-(`results/metrics_measurement.json`; errors are Fisher standard errors.)
+(`results/metrics_measurement.json`; errors are Fisher standard errors; the
+DATA·full row uses a 70k-event subsample for memory reasons.)
 
 Reading the table:
 - **The signal is real in data** and needs more than a simple η-asymmetry: the
@@ -47,9 +48,12 @@ Reading the table:
   more longitudinal information into the soft charged event than survives in
   detector data — a statement a tuned generator comparison could sharpen into a
   constraint on beam-remnant/ISR modelling.
-- The full variant with neutrals adds nothing in data (neutrals carry no vertex
-  association and ~25 pileup interactions of contamination) while helping in
-  truth-level sim — quantifying how much of the truth-level signal pileup burns.
+- **Pileup burns the signal**: adding the vertex-less neutrals (~440
+  pileup-dominated particles on top of 28 signal tracks) collapses the deep set
+  to zero (0.003) while engineered observables keep a residual 0.10 — under
+  heavy pileup the deep set cannot isolate the informative minority, and
+  PV-associated charged tracks are the only clean carrier. In truth-level sim
+  (no pileup) the same neutrals *help* (0.200→0.268).
 
 ## The artifact this measurement had to survive (integrity control)
 
