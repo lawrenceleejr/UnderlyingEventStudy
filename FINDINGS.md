@@ -4,32 +4,54 @@
 predict the Z's longitudinal boost (rapidity `y_Z`), which is set by the colliding
 partons' momentum fractions `x1, x2`?
 
-**Short answer.** Yes — the information is genuinely present, even at Pythia8
-truth level (no detector, no pileup), and a permutation-invariant deep set (Energy
-Flow Network) extracts more of it than hand-built underlying-event observables.
-The predictive power is carried mainly by the **beam-remnant / ISR fragmentation**
-that is kinematically tied to `x1, x2`; the multi-parton-interaction (MPI)
-component of the underlying event is largely *uncorrelated* with the boost and
-dilutes the signal.
+**Short answer.** Yes — **measured in real CMS collision data**: on 141,965
+`Z→μμ` events from DoubleMuon Run2016G open data, a deep set reading only the
+soft, PV-associated charged particles predicts `y_Z` with
+**corr = 0.142 ± 0.007 (~21σ)**, sign accuracy 0.550, against a shuffled-target
+control of 0.005 (`results/REPORT_opendata.md`). At Pythia8 truth level the
+matched correlation is 0.200 ± 0.009 — data retains ~70% of the simulated
+signal. The predictive power is carried mainly by the **beam-remnant / ISR
+fragmentation** kinematically tied to `x1, x2`; the multi-parton-interaction
+(MPI) component is largely uncorrelated with the boost and dilutes the signal.
 
-## 1. Headline (Pythia8, Monash tune, 13 TeV, 76k `Z→μμ`)
+## 0. The real-data measurement (the flagship result)
+
+CMS MiniAOD is decoded directly with uproot (`src/miniaod.py` — no CMSSW), the
+Z is built from the PF muons (peak at 90.7 GeV), and the soft set is charged
+particles with `0.5 < pT < 5 GeV`, `|η| < 2.5`, leading-PV association, and a
+wide ΔR > 0.4 muon veto:
+
+| variant | ⟨n⟩ | linear | GBDT rich | **EFN** | sign acc | shuffle |
+|---|---|---|---|---|---|---|
+| **DATA · charged-PV** | 28 | 0.046 | 0.130 | **0.142 ± 0.007** | 0.550 | 0.005 |
+| SIM · charged-PV | 37 | 0.099 | 0.176 | **0.200 ± 0.009** | 0.571 | −0.001 |
+| SIM · full (truth) | 72 | 0.159 | 0.241 | **0.268 ± 0.009** | 0.588 | 0.008 |
+
+In data the simple η-asymmetry nearly vanishes (linear 0.046) while the deep
+set extracts 0.142 — the information survives in subtler correlations. The
+data/sim ratio (~0.7) is itself physics: Pythia transports more longitudinal
+information into the soft charged event than survives in detector data.
+
+## 1. Simulation reference (Pythia8, Monash tune, 13 TeV, 76k `Z→μμ`, veto 0.4)
 
 Soft particles = non-muon final-state particles, `0.5 < pT < 5 GeV`, charged to
 `|η|<2.5` and neutrals to `|η|<5`; muons and their footprint removed. Targets
 `y_Z`, `pz`, `β_z`. Per-particle inputs are longitudinal-info-safe (each
-particle's own η, log pₜ, charge, PUPPI, azimuth *relative to the Z*).
+particle's own η, log pₜ, charge, azimuth *relative to the Z*).
 
-| model | corr(y_Z) | R²(y_Z) | sign acc | corr(pz) |
-|---|---|---|---|---|
-| predict-the-mean | – | 0.00 | 0.50 | – |
-| linear on UE summary obs | 0.17 | 0.03 | 0.56 | 0.17 |
-| GBDT on UE summary obs | 0.18 | 0.03 | 0.56 | 0.18 |
-| **Energy Flow Network** | **0.26** | **0.067** | **0.59** | **0.27** |
+| model | corr(y_Z) | R²(y_Z) | sign acc |
+|---|---|---|---|
+| predict-the-mean | 0 | 0.00 | 0.50 |
+| linear on UE summary obs | 0.16 | 0.03 | 0.55 |
+| GBDT on UE summary obs | 0.16 | 0.03 | 0.55 |
+| GBDT on rich engineered obs | 0.24 | 0.06 | 0.58 |
+| **Energy Flow Network** | **0.27** | **0.068** | **0.59** |
 
-The deep set beats the engineered-feature baselines by ~50% in correlation: the
-soft event carries boost information beyond the simple η-pₜ-asymmetry, and the
-network finds it. Sign accuracy 0.59 means it identifies *which* proton's parton
-was harder 59% of the time (vs 50% chance).
+The deep set beats even a rich engineered-feature baseline built from the same
+per-particle information (0.27 vs 0.24) — most of the signal is capturable by
+well-chosen observables, with a genuine residual advantage for the network.
+Sign accuracy 0.59 = it identifies *which* proton's parton was harder 59% of
+the time (vs 50% chance).
 
 ## 2. Where does the information live? (η / charge ablation)
 
@@ -75,45 +97,41 @@ GPU via `train.sh` it trains comfortably — on CPU it is the slow path.)
 
 ## 5. Relation to the original hypothesis
 
-The premise — *the soft event encodes the hard-scatter longitudinal boost* — holds
-in simulation. The nuance is which soft component carries it: not the MPI/UE, but
-the beam-remnant and initial-state-radiation fragmentation, exactly the components
-the Sjöstrand–Skands beam-remnant model ties to the initiator `x` values. Pythia
-*does* contain this effect (contrary to the prior that it would not), which is
-itself informative: a model trained on data can be compared against Pythia to test
-whether nature shows a *stronger* correlation than the generator.
+The premise — *the soft event encodes the hard-scatter longitudinal boost* — is
+now demonstrated in both simulation and collision data (§0). The nuance is which
+soft component carries it: not the MPI/UE, but the beam-remnant and
+initial-state-radiation fragmentation, exactly the components the
+Sjöstrand–Skands beam-remnant model ties to the initiator `x` values. The
+data/sim comparison (0.142 vs 0.200) says Pythia somewhat *over*-transports this
+correlation into the detector-level soft charged event — the opposite of the
+original prior that the generator would not contain it at all, and a handle a
+tuned comparison could turn into a beam-remnant/ISR modelling constraint.
 
-## 5b. Real-data check and the muon-footprint lesson (important)
+## 5b. The muon-footprint lesson (how the measurement had to be protected)
 
-We ran the identical pipeline on real CMS data (DoubleMuon 2016, jets-only PFNano,
-63k `Z→μμ`). It first appeared to work *too well* — EFN corr 0.53, sign-acc 0.71,
-above truth-level Pythia. That was a **detector artifact**: with a tight muon veto
-(ΔR<0.05), neutral calorimeter deposits from the muons survive near the muon
-directions, and the network reconstructs those directions (which fix `y_Z`). The
-controls:
+A first pass on the *jets-only* PFNano derived data (record 31305) with a tight
+ΔR<0.05 muon veto appeared to work *too well* — EFN corr 0.53, sign-acc 0.71,
+above truth-level Pythia. That was a **detector artifact**: neutral calorimeter
+deposits from the muons survive near the muon directions, and the network
+reconstructs those directions (which fix `y_Z`). The controls:
 
 - shuffled-target control → corr −0.01 (no code/label leak; pipeline sound)
-- widen muon veto to ΔR<0.40 → signal gone: corr **−0.02** in the initial
-  12k-event diagnostic, **+0.01** in the full 63k re-skim
-  (`results/metrics_opendata.json`) — both consistent with zero
+- widen muon veto to ΔR<0.40 → signal gone (−0.02 in the 12k diagnostic, +0.01
+  in the full 63k re-skim — both consistent with zero)
 - same widening on truth Pythia → corr 0.282→0.273 (**unchanged** — truth muons
-  leave no deposits, so §1–4 are robust)
+  leave no deposits)
 
-After removing the leak (default veto is now ΔR<0.4), the jets-only data shows only
-a modest ~0.20 correlation in simple recoil η-asymmetry observables — the hard jet
-recoil, *not* the diffuse soft UE (jets-only stores only jet constituents). Full
-story: `results/REPORT_opendata.md`. The lesson: **a wide muon veto / explicit
-muon-footprint removal is mandatory in data**, and the jets-only sample is not the
-right one — a real measurement needs `_allPF` tracks (`opendata/run.sh`).
+Every number in §0 therefore uses the wide ΔR<0.4 veto and a per-variant
+shuffle control, and the flagship measurement uses the *diffuse* soft tracks
+decoded from MiniAOD, not jet constituents. The lesson stands: **explicit
+muon-footprint removal is mandatory in detector data.**
 
-## 6. Caveats and next step (real data)
+## 6. Caveats
 
-- These numbers are Pythia8 truth level: no detector resolution, no pileup, full
-  acceptance. Real CMS data has ~20–30 pileup interactions that contaminate the
-  soft/forward event; the pileup-robust handle is central *charged tracks from the
-  primary vertex* (the `central charged` row above is the relevant proxy).
-- The correlation magnitude is tune-dependent; a data measurement is the real test
-  of whether the generator gets it right.
+- §1–4 are Pythia8 truth level and serve as the reference for the data
+  measurement in §0 (which carries detector effects and pileup for real).
+- The correlation magnitude is tune-dependent; the data/sim ratio in §0 is the
+  quantity a generator comparison should target.
 - **Veto-hole channel:** removing ΔR<0.4 cones around the muons deletes particles
   *as a function of the muon directions*, so in principle a network could locate
   the two depleted cones and infer the muon η (→ y_Z). At truth level the
